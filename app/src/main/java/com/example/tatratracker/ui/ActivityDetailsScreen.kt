@@ -50,7 +50,6 @@ import com.example.tatratracker.ui.theme.TatraBackground
 import com.example.tatratracker.ui.theme.TatraDanger
 import com.example.tatratracker.ui.theme.TatraDangerSoft
 import com.example.tatratracker.ui.theme.TatraDark
-import com.example.tatratracker.ui.theme.TatraGreen
 import com.example.tatratracker.ui.theme.TatraGreenVerySoft
 import com.example.tatratracker.ui.theme.TatraOutline
 import com.example.tatratracker.ui.theme.TatraSpacing

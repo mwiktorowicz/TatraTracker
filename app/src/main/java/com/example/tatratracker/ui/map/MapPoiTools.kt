@@ -33,7 +33,6 @@ import androidx.compose.ui.unit.dp
 import com.example.tatratracker.ui.components.TatraListRow
 import com.example.tatratracker.ui.components.TatraSecondaryButton
 import com.example.tatratracker.ui.theme.TatraDark
-import com.example.tatratracker.ui.theme.TatraGreen
 import com.example.tatratracker.ui.theme.TatraSurface
 import com.example.tatratracker.ui.theme.TatraTextMuted
 
