@@ -2,12 +2,17 @@ package com.example.tatratracker.data
 
 import android.content.Context
 import android.util.JsonReader
+import android.util.JsonToken
 import com.example.tatratracker.model.TrackPoint
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.InputStreamReader
 import kotlin.math.abs
 import kotlin.math.atan2
+import kotlin.math.ceil
 import kotlin.math.cos
 import kotlin.math.floor
 import kotlin.math.max
@@ -15,29 +20,91 @@ import kotlin.math.min
 import kotlin.math.pow
 import kotlin.math.sqrt
 
+data class TrailColorProgress(
+    val color: String,
+    val totalLengthMeters: Double,
+    val completedLengthMeters: Double
+) {
+    val completedFraction: Double
+        get() = fraction(
+            completedLengthMeters,
+            totalLengthMeters
+        )
+}
+
+data class TrailNameProgress(
+    val name: String,
+    val colors: List<String>,
+    val totalLengthMeters: Double,
+    val completedLengthMeters: Double
+) {
+    val completedFraction: Double
+        get() = fraction(
+            completedLengthMeters,
+            totalLengthMeters
+        )
+}
+
 data class TrailMatchResult(
     val matchedGeoJson: String,
+    val totalLengthMeters: Double,
     val matchedLengthMeters: Double,
-    val matchedSegmentCount: Int,
-    val matchedWayCount: Int
-)
+    val matchedWayCount: Int,
+    val matchedTrackCount: Int,
+    val colorProgress: List<TrailColorProgress>,
+    val trailProgress: List<TrailNameProgress>
+) {
+    val completedFraction: Double
+        get() = fraction(
+            matchedLengthMeters,
+            totalLengthMeters
+        )
+}
+
+private fun fraction(
+    part: Double,
+    total: Double
+): Double {
+
+    return if (total > 0.0) {
+        part / total
+    } else {
+        0.0
+    }
+}
 
 class TrailMatcher(
-    private val context: Context
+    context: Context
 ) {
+
+    private val appContext =
+        context.applicationContext
 
     private data class Point(
         val lat: Double,
         val lon: Double
     )
 
-    private data class TrailFeature(
+    /*
+     * Jeden odcinek (way) z pliku szlaków.
+     *
+     * points są już zagęszczone, więc
+     * każdy kawałek ma najwyżej
+     * maxTrailPieceLengthMeters.
+     */
+    private class TrailFeature(
         val wayId: String,
+        val colors: List<String>,
+        val names: List<String>,
         val points: List<Point>,
-        val minLat: Double,
-        val maxLat: Double,
-        val minLon: Double,
-        val maxLon: Double
+        val segmentLengths: DoubleArray,
+        val lengthMeters: Double
+    )
+
+    private data class FeatureProperties(
+        val wayId: String,
+        val colors: List<String>,
+        val names: List<String>
     )
 
     private data class CellKey(
@@ -45,13 +112,24 @@ class TrailMatcher(
         val y: Int
     )
 
-    private data class TrailNetwork(
-        val features: List<TrailFeature>,
-        val spatialIndex: Map<CellKey, List<Int>>
+    /*
+     * Kawałek szlaku między punktami
+     * segmentIndex i segmentIndex + 1
+     * w Feature o numerze featureIndex.
+     */
+    private data class SegmentRef(
+        val featureIndex: Int,
+        val segmentIndex: Int
     )
 
-    private var cachedNetwork:
-            TrailNetwork? = null
+    private class TrailNetwork(
+        val features: List<TrailFeature>,
+        val spatialIndex: Map<CellKey, List<SegmentRef>>,
+        val totalLengthMeters: Double,
+        val colorLengths: Map<String, Double>,
+        val trailLengths: Map<String, Double>,
+        val trailColors: Map<String, List<String>>
+    )
 
     /*
      * =====================================================
@@ -91,6 +169,14 @@ class TrailMatcher(
         250.0
 
     /*
+     * Długie odcinki OSM dzielimy na krótsze
+     * kawałki, żeby ślad dotykający tylko
+     * końca odcinka nie zaliczał go w całości.
+     */
+    private val maxTrailPieceLengthMeters =
+        25.0
+
+    /*
      * Rozmiar komórki indeksu przestrzennego.
      *
      * 0.002 stopnia to w Tatrach mniej więcej
@@ -99,144 +185,183 @@ class TrailMatcher(
     private val gridCellSizeDegrees =
         0.002
 
+    private val colorOrder =
+        listOf(
+            "red",
+            "blue",
+            "green",
+            "yellow",
+            "black"
+        )
+
     /*
      * =====================================================
      * PUBLICZNA FUNKCJA
      * =====================================================
      */
 
-    fun matchTracks(
-        tracks: List<List<TrackPoint>>
+    /*
+     * Ślady przychodzą po jednym,
+     * więc w pamięci nie trzeba trzymać
+     * punktów wszystkich aktywności naraz.
+     */
+    suspend fun matchTracks(
+        tracks: Flow<List<TrackPoint>>
     ): TrailMatchResult {
 
-        val network =
-            getOrLoadNetwork()
+        return withContext(
+            Dispatchers.Default
+        ) {
 
-        /*
-         * Klucz:
-         *
-         * index Feature -> numery zaliczonych
-         * małych segmentów tej Feature.
-         */
-        val matchedSegments =
-            mutableMapOf<
-                    Int,
-                    MutableSet<Int>
-                    >()
+            val network =
+                getOrLoadNetwork()
 
-        tracks.forEach { track ->
+            /*
+             * Klucz:
+             *
+             * index Feature -> numery zaliczonych
+             * kawałków tej Feature.
+             */
+            val matchedSegments =
+                mutableMapOf<
+                        Int,
+                        MutableSet<Int>
+                        >()
 
-            if (track.size < 2) {
-                return@forEach
+            var matchedTrackCount =
+                0
+
+            tracks.collect { track ->
+
+                val matchedAnything =
+                    matchTrack(
+                        network =
+                            network,
+
+                        track =
+                            track,
+
+                        matchedSegments =
+                            matchedSegments
+                    )
+
+                if (matchedAnything) {
+                    matchedTrackCount++
+                }
             }
 
-            for (
-            trackIndex
-            in 0 until track.lastIndex
+            buildResult(
+                network =
+                    network,
+
+                matchedSegments =
+                    matchedSegments,
+
+                matchedTrackCount =
+                    matchedTrackCount
+            )
+        }
+    }
+
+    private fun matchTrack(
+        network: TrailNetwork,
+        track: List<TrackPoint>,
+        matchedSegments:
+        MutableMap<Int, MutableSet<Int>>
+    ): Boolean {
+
+        var matchedAnything =
+            false
+
+        for (
+        trackIndex
+        in 0 until track.lastIndex
+        ) {
+
+            val trackStart =
+                Point(
+                    lat =
+                        track[trackIndex].lat,
+                    lon =
+                        track[trackIndex].lon
+                )
+
+            val trackEnd =
+                Point(
+                    lat =
+                        track[trackIndex + 1].lat,
+                    lon =
+                        track[trackIndex + 1].lon
+                )
+
+            val trackLength =
+                distanceMeters(
+                    trackStart,
+                    trackEnd
+                )
+
+            /*
+             * Ignorujemy:
+             *
+             * - praktycznie zerowy ruch,
+             * - ogromne dziury w zapisie GPS.
+             */
+            if (
+                trackLength < 1.0 ||
+                trackLength >
+                maxTrackSegmentLengthMeters
             ) {
+                continue
+            }
 
-                val trackStart =
-                    Point(
-                        lat =
-                            track[trackIndex].lat,
-                        lon =
-                            track[trackIndex].lon
-                    )
+            val candidates =
+                findCandidateSegments(
+                    network = network,
+                    start = trackStart,
+                    end = trackEnd
+                )
 
-                val trackEnd =
-                    Point(
-                        lat =
-                            track[trackIndex + 1].lat,
-                        lon =
-                            track[trackIndex + 1].lon
-                    )
+            candidates.forEach { candidate ->
 
-                val trackLength =
-                    distanceMeters(
-                        trackStart,
-                        trackEnd
-                    )
+                val feature =
+                    network.features[
+                        candidate.featureIndex
+                    ]
 
-                /*
-                 * Ignorujemy:
-                 *
-                 * - praktycznie zerowy ruch,
-                 * - ogromne dziury w zapisie GPS.
-                 */
                 if (
-                    trackLength < 1.0 ||
-                    trackLength >
-                    maxTrackSegmentLengthMeters
-                ) {
-                    continue
-                }
-
-                val candidateFeatures =
-                    findCandidateFeatures(
-                        network = network,
-                        start = trackStart,
-                        end = trackEnd
+                    trailSegmentMatchesTrack(
+                        trackStart =
+                            trackStart,
+                        trackEnd =
+                            trackEnd,
+                        trailStart =
+                            feature.points[
+                                candidate.segmentIndex
+                            ],
+                        trailEnd =
+                            feature.points[
+                                candidate.segmentIndex + 1
+                            ]
                     )
+                ) {
 
-                candidateFeatures.forEach {
-                        featureIndex ->
-
-                    val feature =
-                        network.features[
-                            featureIndex
-                        ]
-
-                    for (
-                    segmentIndex
-                    in 0 until
-                            feature.points.lastIndex
-                    ) {
-
-                        val trailStart =
-                            feature.points[
-                                segmentIndex
-                            ]
-
-                        val trailEnd =
-                            feature.points[
-                                segmentIndex + 1
-                            ]
-
-                        if (
-                            trailSegmentMatchesTrack(
-                                trackStart =
-                                    trackStart,
-                                trackEnd =
-                                    trackEnd,
-                                trailStart =
-                                    trailStart,
-                                trailEnd =
-                                    trailEnd
-                            )
+                    matchedSegments
+                        .getOrPut(
+                            candidate.featureIndex
                         ) {
-
-                            matchedSegments
-                                .getOrPut(
-                                    featureIndex
-                                ) {
-                                    mutableSetOf()
-                                }
-                                .add(
-                                    segmentIndex
-                                )
+                            mutableSetOf()
                         }
-                    }
+                        .add(
+                            candidate.segmentIndex
+                        )
+
+                    matchedAnything =
+                        true
                 }
             }
         }
 
-        return buildResult(
-            network =
-                network,
-
-            matchedSegments =
-                matchedSegments
-        )
+        return matchedAnything
     }
 
     /*
@@ -252,27 +377,94 @@ class TrailMatcher(
             return it
         }
 
+        return synchronized(
+            networkLock
+        ) {
+
+            cachedNetwork
+                ?: loadNetwork().also { network ->
+
+                    cachedNetwork =
+                        network
+                }
+        }
+    }
+
+    private fun loadNetwork():
+            TrailNetwork {
+
         val features =
             loadFeatures()
 
-        val spatialIndex =
-            buildSpatialIndex(
-                features
-            )
+        val colorLengths =
+            mutableMapOf<String, Double>()
 
-        val network =
-            TrailNetwork(
-                features =
-                    features,
+        val trailLengths =
+            mutableMapOf<String, Double>()
 
-                spatialIndex =
-                    spatialIndex
-            )
+        /*
+         * Kolor szlaku to kolor wspólny
+         * dla wszystkich jego odcinków.
+         *
+         * Odcinek wspólny np. czerwonego
+         * i zielonego szlaku ma oba kolory,
+         * ale cały czerwony szlak ma
+         * tylko czerwony.
+         */
+        val trailColors =
+            mutableMapOf<String, Set<String>>()
 
-        cachedNetwork =
-            network
+        features.forEach { feature ->
 
-        return network
+            feature.colors.forEach { color ->
+
+                colorLengths[color] =
+                    (colorLengths[color] ?: 0.0) +
+                            feature.lengthMeters
+            }
+
+            feature.names.forEach { name ->
+
+                trailLengths[name] =
+                    (trailLengths[name] ?: 0.0) +
+                            feature.lengthMeters
+
+                trailColors[name] =
+                    trailColors[name]
+                        ?.intersect(
+                            feature.colors.toSet()
+                        )
+                        ?: feature.colors.toSet()
+            }
+        }
+
+        return TrailNetwork(
+            features =
+                features,
+
+            spatialIndex =
+                buildSpatialIndex(
+                    features
+                ),
+
+            totalLengthMeters =
+                features.sumOf {
+                    it.lengthMeters
+                },
+
+            colorLengths =
+                colorLengths,
+
+            trailLengths =
+                trailLengths,
+
+            trailColors =
+                trailColors.mapValues { (_, colors) ->
+                    colors.sortedBy(
+                        ::colorSortIndex
+                    )
+                }
+        )
     }
 
     private fun loadFeatures():
@@ -281,7 +473,7 @@ class TrailMatcher(
         val result =
             mutableListOf<TrailFeature>()
 
-        context.assets
+        appContext.assets
             .open(
                 "tatry_szlaki.geojson"
             )
@@ -359,6 +551,12 @@ class TrailMatcher(
         var wayId =
             ""
 
+        var colors =
+            emptyList<String>()
+
+        var names =
+            emptyList<String>()
+
         var points:
                 List<Point>? = null
 
@@ -382,18 +580,24 @@ class TrailMatcher(
 
                 "properties" -> {
 
-                    val propertyWayId =
+                    val properties =
                         readProperties(
                             reader
                         )
 
                     if (
-                        propertyWayId
+                        properties.wayId
                             .isNotBlank()
                     ) {
                         wayId =
-                            propertyWayId
+                            properties.wayId
                     }
+
+                    colors =
+                        properties.colors
+
+                    names =
+                        properties.names
                 }
 
                 "geometry" -> {
@@ -422,53 +626,55 @@ class TrailMatcher(
             return null
         }
 
-        val minLat =
-            finalPoints.minOf {
-                it.lat
-            }
+        val densePoints =
+            densify(
+                finalPoints
+            )
 
-        val maxLat =
-            finalPoints.maxOf {
-                it.lat
-            }
+        val segmentLengths =
+            DoubleArray(
+                densePoints.lastIndex
+            ) { index ->
 
-        val minLon =
-            finalPoints.minOf {
-                it.lon
-            }
-
-        val maxLon =
-            finalPoints.maxOf {
-                it.lon
+                distanceMeters(
+                    densePoints[index],
+                    densePoints[index + 1]
+                )
             }
 
         return TrailFeature(
             wayId =
                 wayId,
 
+            colors =
+                colors,
+
+            names =
+                names,
+
             points =
-                finalPoints,
+                densePoints,
 
-            minLat =
-                minLat,
+            segmentLengths =
+                segmentLengths,
 
-            maxLat =
-                maxLat,
-
-            minLon =
-                minLon,
-
-            maxLon =
-                maxLon
+            lengthMeters =
+                segmentLengths.sum()
         )
     }
 
     private fun readProperties(
         reader: JsonReader
-    ): String {
+    ): FeatureProperties {
 
         var wayId =
             ""
+
+        var colors =
+            emptyList<String>()
+
+        var names =
+            emptyList<String>()
 
         reader.beginObject()
 
@@ -488,6 +694,22 @@ class TrailMatcher(
                         )
                 }
 
+                "colors" -> {
+
+                    colors =
+                        readStringArray(
+                            reader
+                        )
+                }
+
+                "names" -> {
+
+                    names =
+                        readStringArray(
+                            reader
+                        )
+                }
+
                 else -> {
                     reader.skipValue()
                 }
@@ -496,7 +718,16 @@ class TrailMatcher(
 
         reader.endObject()
 
-        return wayId
+        return FeatureProperties(
+            wayId =
+                wayId,
+
+            colors =
+                colors,
+
+            names =
+                names
+        )
     }
 
     private fun readGeometry(
@@ -598,6 +829,43 @@ class TrailMatcher(
         return result
     }
 
+    private fun readStringArray(
+        reader: JsonReader
+    ): List<String> {
+
+        if (
+            reader.peek() !=
+            JsonToken.BEGIN_ARRAY
+        ) {
+            reader.skipValue()
+            return emptyList()
+        }
+
+        val result =
+            mutableListOf<String>()
+
+        reader.beginArray()
+
+        while (
+            reader.hasNext()
+        ) {
+
+            readFlexibleString(
+                reader
+            )
+                .takeIf {
+                    it.isNotBlank()
+                }
+                ?.let {
+                    result.add(it)
+                }
+        }
+
+        reader.endArray()
+
+        return result
+    }
+
     private fun readFlexibleString(
         reader: JsonReader
     ): String {
@@ -613,6 +881,71 @@ class TrailMatcher(
         }
     }
 
+    private fun densify(
+        points: List<Point>
+    ): List<Point> {
+
+        val result =
+            mutableListOf(
+                points.first()
+            )
+
+        for (
+        index
+        in 0 until points.lastIndex
+        ) {
+
+            val start =
+                points[index]
+
+            val end =
+                points[index + 1]
+
+            val pieces =
+                ceil(
+                    distanceMeters(
+                        start,
+                        end
+                    ) /
+                            maxTrailPieceLengthMeters
+                )
+                    .toInt()
+                    .coerceAtLeast(1)
+
+            /*
+             * Na odległościach kilkuset metrów
+             * interpolacja liniowa współrzędnych
+             * jest wystarczająco dokładna.
+             */
+            for (
+            piece
+            in 1 until pieces
+            ) {
+
+                val t =
+                    piece.toDouble() /
+                            pieces
+
+                result.add(
+                    Point(
+                        lat =
+                            start.lat +
+                                    (end.lat - start.lat) * t,
+                        lon =
+                            start.lon +
+                                    (end.lon - start.lon) * t
+                    )
+                )
+            }
+
+            result.add(
+                end
+            )
+        }
+
+        return result
+    }
+
     /*
      * =====================================================
      * INDEKS PRZESTRZENNY
@@ -621,58 +954,91 @@ class TrailMatcher(
 
     private fun buildSpatialIndex(
         features: List<TrailFeature>
-    ): Map<CellKey, List<Int>> {
+    ): Map<CellKey, List<SegmentRef>> {
 
         val index =
             mutableMapOf<
                     CellKey,
-                    MutableList<Int>
+                    MutableList<SegmentRef>
                     >()
 
         features.forEachIndexed {
                 featureIndex,
                 feature ->
 
-            val minX =
-                gridX(
-                    feature.minLon
-                )
-
-            val maxX =
-                gridX(
-                    feature.maxLon
-                )
-
-            val minY =
-                gridY(
-                    feature.minLat
-                )
-
-            val maxY =
-                gridY(
-                    feature.maxLat
-                )
-
             for (
-            x in minX..maxX
+            segmentIndex
+            in 0 until feature.points.lastIndex
             ) {
 
+                val start =
+                    feature.points[
+                        segmentIndex
+                    ]
+
+                val end =
+                    feature.points[
+                        segmentIndex + 1
+                    ]
+
+                val minX =
+                    gridX(
+                        min(
+                            start.lon,
+                            end.lon
+                        )
+                    )
+
+                val maxX =
+                    gridX(
+                        max(
+                            start.lon,
+                            end.lon
+                        )
+                    )
+
+                val minY =
+                    gridY(
+                        min(
+                            start.lat,
+                            end.lat
+                        )
+                    )
+
+                val maxY =
+                    gridY(
+                        max(
+                            start.lat,
+                            end.lat
+                        )
+                    )
+
                 for (
-                y in minY..maxY
+                x in minX..maxX
                 ) {
 
-                    index
-                        .getOrPut(
-                            CellKey(
-                                x = x,
-                                y = y
+                    for (
+                    y in minY..maxY
+                    ) {
+
+                        index
+                            .getOrPut(
+                                CellKey(
+                                    x = x,
+                                    y = y
+                                )
+                            ) {
+                                mutableListOf()
+                            }
+                            .add(
+                                SegmentRef(
+                                    featureIndex =
+                                        featureIndex,
+                                    segmentIndex =
+                                        segmentIndex
+                                )
                             )
-                        ) {
-                            mutableListOf()
-                        }
-                        .add(
-                            featureIndex
-                        )
+                    }
                 }
             }
         }
@@ -680,11 +1046,11 @@ class TrailMatcher(
         return index
     }
 
-    private fun findCandidateFeatures(
+    private fun findCandidateSegments(
         network: TrailNetwork,
         start: Point,
         end: Point
-    ): Set<Int> {
+    ): Set<SegmentRef> {
 
         val averageLatitude =
             (
@@ -767,7 +1133,7 @@ class TrailMatcher(
             )
 
         val candidates =
-            mutableSetOf<Int>()
+            mutableSetOf<SegmentRef>()
 
         for (
         x in minX..maxX
@@ -784,10 +1150,10 @@ class TrailMatcher(
                         y = y
                     )
                 ]
-                    ?.let { indices ->
+                    ?.let { segments ->
 
                         candidates.addAll(
-                            indices
+                            segments
                         )
                     }
             }
@@ -1263,17 +1629,24 @@ class TrailMatcher(
     private fun buildResult(
         network: TrailNetwork,
         matchedSegments:
-        Map<Int, Set<Int>>
+        Map<Int, Set<Int>>,
+        matchedTrackCount: Int
     ): TrailMatchResult {
 
         val featuresJson =
             JSONArray()
 
-        var totalLength =
+        var totalMatchedLength =
             0.0
 
-        var segmentCount =
+        var matchedWayCount =
             0
+
+        val colorMatchedLengths =
+            mutableMapOf<String, Double>()
+
+        val trailMatchedLengths =
+            mutableMapOf<String, Double>()
 
         matchedSegments.forEach {
                 (
@@ -1300,32 +1673,35 @@ class TrailMatcher(
              * Liczenie faktycznie zaliczonej
              * długości.
              */
-            sorted.forEach {
-                    segmentIndex ->
-
-                if (
-                    segmentIndex <
-                    feature.points.lastIndex
-                ) {
-
-                    totalLength +=
-                        distanceMeters(
-                            feature.points[
-                                segmentIndex
-                            ],
-
-                            feature.points[
-                                segmentIndex + 1
-                            ]
-                        )
-
-                    segmentCount++
+            val featureMatchedLength =
+                sorted.sumOf { segmentIndex ->
+                    feature.segmentLengths[
+                        segmentIndex
+                    ]
                 }
+
+            totalMatchedLength +=
+                featureMatchedLength
+
+            matchedWayCount++
+
+            feature.colors.forEach { color ->
+
+                colorMatchedLengths[color] =
+                    (colorMatchedLengths[color] ?: 0.0) +
+                            featureMatchedLength
+            }
+
+            feature.names.forEach { name ->
+
+                trailMatchedLengths[name] =
+                    (trailMatchedLengths[name] ?: 0.0) +
+                            featureMatchedLength
             }
 
             /*
              * Łączymy sąsiednie zaliczone
-             * segmenty z powrotem w dłuższe
+             * kawałki z powrotem w dłuższe
              * linie.
              *
              * Dzięki temu MapLibre dostanie
@@ -1403,19 +1779,94 @@ class TrailMatcher(
                     featuresJson
                 )
 
+        val colorProgress =
+            network.colorLengths
+                .map { (color, totalLength) ->
+
+                    TrailColorProgress(
+                        color =
+                            color,
+
+                        totalLengthMeters =
+                            totalLength,
+
+                        completedLengthMeters =
+                            colorMatchedLengths[color]
+                                ?: 0.0
+                    )
+                }
+                .sortedBy {
+                    colorSortIndex(
+                        it.color
+                    )
+                }
+
+        val trailProgress =
+            network.trailLengths
+                .map { (name, totalLength) ->
+
+                    TrailNameProgress(
+                        name =
+                            name,
+
+                        colors =
+                            network.trailColors[name]
+                                .orEmpty(),
+
+                        totalLengthMeters =
+                            totalLength,
+
+                        completedLengthMeters =
+                            trailMatchedLengths[name]
+                                ?: 0.0
+                    )
+                }
+                .sortedWith(
+                    compareByDescending<TrailNameProgress> {
+                        it.completedFraction
+                    }.thenBy {
+                        it.name
+                    }
+                )
+
         return TrailMatchResult(
             matchedGeoJson =
                 collection.toString(),
 
-            matchedLengthMeters =
-                totalLength,
+            totalLengthMeters =
+                network.totalLengthMeters,
 
-            matchedSegmentCount =
-                segmentCount,
+            matchedLengthMeters =
+                totalMatchedLength,
 
             matchedWayCount =
-                matchedSegments.size
+                matchedWayCount,
+
+            matchedTrackCount =
+                matchedTrackCount,
+
+            colorProgress =
+                colorProgress,
+
+            trailProgress =
+                trailProgress
         )
+    }
+
+    private fun colorSortIndex(
+        color: String
+    ): Int {
+
+        val index =
+            colorOrder.indexOf(
+                color
+            )
+
+        return if (index >= 0) {
+            index
+        } else {
+            colorOrder.size
+        }
     }
 
     private fun addMatchedRun(
@@ -1494,5 +1945,20 @@ class TrailMatcher(
         featuresJson.put(
             jsonFeature
         )
+    }
+
+    companion object {
+
+        /*
+         * Sieć jest wspólna dla wszystkich instancji,
+         * żeby plik szlaków parsować raz
+         * na uruchomienie aplikacji.
+         */
+        @Volatile
+        private var cachedNetwork:
+                TrailNetwork? = null
+
+        private val networkLock =
+            Any()
     }
 }

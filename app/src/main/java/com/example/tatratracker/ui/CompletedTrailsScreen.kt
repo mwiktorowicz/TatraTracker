@@ -18,13 +18,13 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.tatratracker.ui.components.TatraCard
-import com.example.tatratracker.ui.components.TatraFeatureDialog
+import com.example.tatratracker.ui.components.TatraErrorState
+import com.example.tatratracker.ui.components.TatraLoadingState
 import com.example.tatratracker.ui.components.TatraPrimaryButton
 import com.example.tatratracker.ui.components.TatraSecondaryButton
 import com.example.tatratracker.ui.components.TatraSectionHeader
@@ -36,25 +36,20 @@ import com.example.tatratracker.ui.theme.TatraGreen
 import com.example.tatratracker.ui.theme.TatraGreenVerySoft
 import com.example.tatratracker.ui.theme.TatraSpacing
 import com.example.tatratracker.ui.theme.TatraTextMuted
+import com.example.tatratracker.viewmodel.COMPLETED_TRAIL_THRESHOLD
+import com.example.tatratracker.viewmodel.CompletedTrailsUiState
+import com.example.tatratracker.viewmodel.CompletedTrailsViewModel
+import java.util.Locale
+import kotlin.math.roundToInt
 
 @Composable
 fun CompletedTrailsScreen(
     onBack: () -> Unit,
-    onOpenMap: () -> Unit
+    onOpenMap: () -> Unit,
+    viewModel: CompletedTrailsViewModel = viewModel()
 ) {
-    var showMatchingInfo by remember {
-        mutableStateOf(false)
-    }
-
-    if (showMatchingInfo) {
-        TatraFeatureDialog(
-            title = "Analiza ukończonych szlaków",
-            message = "Automatyczne dopasowywanie zapisanych śladów GPS do sieci tatrzańskich szlaków i liczenie postępu jest w przygotowaniu.",
-            onDismiss = {
-                showMatchingInfo = false
-            }
-        )
-    }
+    val state by viewModel.uiState.collectAsState()
+    val result = state.result
 
     Column(
         modifier =
@@ -88,19 +83,31 @@ fun CompletedTrailsScreen(
                     )
 
                     Text(
-                        text = "Postęp nie został jeszcze policzony",
+                        text = summaryTitle(state),
                         color = TatraDark,
                         style = MaterialTheme.typography.titleLarge,
                         modifier = Modifier.padding(top = TatraSpacing.sm)
                     )
 
                     Text(
-                        text = "Po podłączeniu matchingu aktywności zobaczysz tutaj procent ukończenia całej sieci, przebyte kilometry oraz brakujące odcinki.",
+                        text = summaryMessage(state),
                         color = TatraTextMuted,
                         style = MaterialTheme.typography.bodyMedium,
                         modifier = Modifier.padding(top = TatraSpacing.xxs)
                     )
                 }
+            }
+
+            if (state.isLoading) {
+                TatraLoadingState(
+                    message = "Dopasowuję ślady GPS do szlaków..."
+                )
+            }
+
+            state.errorMessage?.let { message ->
+                TatraErrorState(
+                    message = message
+                )
             }
 
             TatraSectionHeader(
@@ -113,14 +120,14 @@ fun CompletedTrailsScreen(
             ) {
                 TatraStatCard(
                     label = "Ukończono",
-                    value = "—%",
+                    value = result?.let { formatPercent(it.completedFraction) } ?: "—%",
                     helper = "Sieci szlaków",
                     modifier = Modifier.weight(1f)
                 )
 
                 TatraStatCard(
                     label = "Przebyto",
-                    value = "— km",
+                    value = result?.let { formatKilometers(it.matchedLengthMeters) } ?: "— km",
                     helper = "Po szlakach",
                     modifier = Modifier.weight(1f)
                 )
@@ -131,15 +138,26 @@ fun CompletedTrailsScreen(
                 horizontalArrangement = Arrangement.spacedBy(TatraSpacing.sm)
             ) {
                 TatraStatCard(
-                    label = "Odcinki",
-                    value = "—",
-                    helper = "Zaliczone",
+                    label = "Szlaki",
+                    value =
+                        if (result != null) {
+                            "${state.completedTrailCount} / ${state.totalTrailCount}"
+                        } else {
+                            "—"
+                        },
+                    helper = "Ukończone ≥ ${(COMPLETED_TRAIL_THRESHOLD * 100).roundToInt()}%",
                     modifier = Modifier.weight(1f)
                 )
 
                 TatraStatCard(
                     label = "Pozostało",
-                    value = "— km",
+                    value =
+                        result?.let {
+                            formatKilometers(
+                                (it.totalLengthMeters - it.matchedLengthMeters)
+                                    .coerceAtLeast(0.0)
+                            )
+                        } ?: "— km",
                     helper = "Do przejścia",
                     modifier = Modifier.weight(1f)
                 )
@@ -160,11 +178,16 @@ fun CompletedTrailsScreen(
             }
 
             TatraSecondaryButton(
-                onClick = {
-                    showMatchingInfo = true
-                }
+                onClick = viewModel::recalculate,
+                enabled = !state.isLoading
             ) {
-                Text("Przelicz postęp")
+                Text(
+                    if (state.isLoading) {
+                        "Liczę postęp..."
+                    } else {
+                        "Przelicz postęp"
+                    }
+                )
             }
 
             Spacer(
@@ -172,4 +195,71 @@ fun CompletedTrailsScreen(
             )
         }
     }
+}
+
+private fun summaryTitle(
+    state: CompletedTrailsUiState
+): String {
+    val result = state.result
+
+    return when {
+        result == null && state.isLoading ->
+            "Liczę postęp"
+
+        result == null ->
+            "Nie udało się policzyć postępu"
+
+        state.activityCount == 0 ->
+            "Brak aktywności"
+
+        result.matchedTrackCount == 0 ->
+            "Brak przebytych szlaków"
+
+        else ->
+            "Przebyto ${formatKilometers(result.matchedLengthMeters)} szlaków"
+    }
+}
+
+private fun summaryMessage(
+    state: CompletedTrailsUiState
+): String {
+    val result = state.result
+
+    return when {
+        result == null && state.isLoading ->
+            "Dopasowuję zapisane ślady GPS do znakowanych szlaków TPN i TANAP."
+
+        result == null ->
+            "Spróbuj przeliczyć postęp jeszcze raz."
+
+        state.activityCount == 0 ->
+            "Zaimportuj aktywność, a policzę, które szlaki już przeszedłeś."
+
+        result.matchedTrackCount == 0 ->
+            "Żadna z Twoich aktywności (${state.activityCount}) nie przebiega znakowanymi szlakami TPN i TANAP."
+
+        else ->
+            "Na podstawie ${result.matchedTrackCount} z ${state.activityCount} aktywności. " +
+                    "Sieć szlaków TPN i TANAP liczy ${formatKilometers(result.totalLengthMeters)}."
+    }
+}
+
+private fun formatKilometers(
+    meters: Double
+): String {
+    return String.format(
+        Locale.getDefault(),
+        "%.1f km",
+        meters / 1000.0
+    )
+}
+
+private fun formatPercent(
+    fraction: Double
+): String {
+    return String.format(
+        Locale.getDefault(),
+        "%.1f%%",
+        fraction * 100.0
+    )
 }
