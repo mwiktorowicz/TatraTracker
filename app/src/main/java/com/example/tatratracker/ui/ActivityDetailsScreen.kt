@@ -345,6 +345,25 @@ private fun ActivityDetailsContent(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 DetailRow(
+                    label = "Czas całkowity",
+                    value = formatDurationCompact(activity.durationMillis)
+                )
+
+                DetailRow(
+                    label = "W ruchu",
+                    value = formatDurationCompact(activity.movingDurationMillis)
+                )
+
+                // Postoje pokazujemy, gdy po zaokrągleniu do minut jest co pokazać.
+                val stopsMillis = activity.durationMillis - activity.movingDurationMillis
+                if (stopsMillis >= 60_000L) {
+                    DetailRow(
+                        label = "Postoje",
+                        value = formatDurationCompact(stopsMillis)
+                    )
+                }
+
+                DetailRow(
                     label = "Średnia prędkość",
                     value = formatSpeed(activity.avgSpeedMs)
                 )

@@ -3,17 +3,18 @@ package com.example.tatratracker.fit
 import android.content.Context
 import android.net.Uri
 import android.provider.OpenableColumns
-import androidx.room.withTransaction
 import com.example.tatratracker.data.ActivityEntity
 import com.example.tatratracker.data.AppDatabase
-import com.example.tatratracker.data.TrackPointMapper
 import com.example.tatratracker.model.TrackPoint
+import com.example.tatratracker.poi.ActivityPoiDetectionResult
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 data class ActivityImportResult(
     val activityId: Int,
+    val poiDetection: Result<ActivityPoiDetectionResult>,
     val fileName: String,
+    // Czas całkowity
     val durationSeconds: Double,
     val distanceMeters: Double,
     val calories: Int,
@@ -36,6 +37,8 @@ class ActivityImportManager(
 
     private val activityDao =
         database.activityDao()
+
+    private val activitySaver = ActivitySaver(context)
 
     suspend fun importActivity(
         uri: Uri
@@ -137,11 +140,8 @@ class ActivityImportManager(
                         sourceFileName =
                             fileName,
 
-                        durationMillis =
-                            (
-                                    parsed.durationSeconds *
-                                            1000.0
-                                    ).toLong(),
+                        durationMillis = parsed.durations.totalMillis,
+                        movingDurationMillis = parsed.durations.movingMillis,
 
                         distanceMeters =
                             parsed.distanceMeters,
@@ -174,50 +174,16 @@ class ActivityImportManager(
                             parsed.maxHeartRate
                     )
 
-                val activityId =
-                    database.withTransaction {
-
-                        val insertedId =
-                            activityDao.insertActivity(
-                                activity
-                            )
-
-                        if (
-                            insertedId <= 0L ||
-                            insertedId > Int.MAX_VALUE
-                        ) {
-                            throw IllegalStateException(
-                                "Nie udało się zapisać aktywności."
-                            )
-                        }
-
-                        val id =
-                            insertedId.toInt()
-
-                        val pointEntities =
-                            TrackPointMapper.toEntities(
-                                points =
-                                    parsed.trackPoints,
-                                activityId =
-                                    id
-                            )
-
-                        activityDao.insertTrackPoints(
-                            pointEntities
-                        )
-
-                        id
-                    }
+                val saved = activitySaver.save(activity, parsed.trackPoints)
 
                 ActivityImportResult(
-                    activityId =
-                        activityId,
+                    activityId = saved.activityId,
+                    poiDetection = saved.poiDetection,
 
                     fileName =
                         fileName,
 
-                    durationSeconds =
-                        parsed.durationSeconds,
+                    durationSeconds = parsed.durations.totalMillis / 1000.0,
 
                     distanceMeters =
                         parsed.distanceMeters,
@@ -296,8 +262,11 @@ class ActivityImportManager(
             startTimeMillis =
                 data.startTimeMillis,
 
-            durationSeconds =
-                data.durationSeconds,
+            // FIT: total_elapsed_time → całkowity, total_timer_time → w ruchu
+            durations = resolveDurations(
+                totalMillis = data.totalElapsedSeconds?.let { (it * 1000.0).toLong() },
+                movingMillis = data.totalTimerSeconds?.let { (it * 1000.0).toLong() },
+            ),
 
             distanceMeters =
                 data.distanceMeters,
@@ -367,8 +336,11 @@ class ActivityImportManager(
             startTimeMillis =
                 data.startTimeMillis,
 
-            durationSeconds =
-                data.durationSeconds,
+            // TCX: czas z punktów (≤ 24 h) → całkowity, suma TotalTimeSeconds → w ruchu
+            durations = resolveDurations(
+                totalMillis = data.elapsedMillisFromPoints,
+                movingMillis = (data.movingSeconds * 1000.0).toLong(),
+            ),
 
             distanceMeters =
                 data.distanceMeters,
@@ -405,18 +377,6 @@ class ActivityImportManager(
 
         return fitTimestampSeconds +
                 FIT_EPOCH_OFFSET_SECONDS
-    }
-
-    private fun speedToPaceSecondsPerKm(
-        speedMetersPerSecond: Double
-    ): Double {
-
-        if (speedMetersPerSecond <= 0.0) {
-            return 0.0
-        }
-
-        return 1000.0 /
-                speedMetersPerSecond
     }
 
     private fun getFileName(
@@ -459,7 +419,7 @@ class ActivityImportManager(
 
     private data class ParsedActivity(
         val startTimeMillis: Long?,
-        val durationSeconds: Double,
+        val durations: ActivityDurations,
         val distanceMeters: Double,
         val calories: Int,
         val averageSpeedMetersPerSecond: Double,

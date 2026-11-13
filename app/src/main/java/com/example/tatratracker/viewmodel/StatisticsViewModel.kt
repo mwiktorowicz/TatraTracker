@@ -52,7 +52,9 @@ data class StatisticsUiState(
     val period: StatisticsPeriod = StatisticsPeriod.ALL,
     val activityCount: Int = 0,
     val distanceMeters: Double = 0.0,
+    // Czas całkowity (z postojami) i czas w ruchu
     val durationMillis: Long = 0L,
+    val movingDurationMillis: Long = 0L,
     val calories: Double = 0.0,
     val totalAscentMeters: Double = 0.0,
     val totalDescentMeters: Double = 0.0,
@@ -221,6 +223,7 @@ class StatisticsViewModel(
             activityCount = activities.size,
             distanceMeters = totalDistance,
             durationMillis = activities.sumOf { it.durationMillis },
+            movingDurationMillis = activities.sumOf { it.movingDurationMillis },
             calories = activities.sumOf { it.calories.coerceAtLeast(0.0) },
             totalAscentMeters = elevation.ascentMeters,
             totalDescentMeters = elevation.descentMeters,

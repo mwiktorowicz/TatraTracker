@@ -219,7 +219,7 @@ private fun StatisticsSummary(
             TatraStatCard(
                 label = "Czas",
                 value = formatDuration(state.durationMillis),
-                helper = "W ruchu",
+                helper = "W ruchu ${formatDuration(state.movingDurationMillis)}",
                 modifier = Modifier.weight(1f)
             )
         }

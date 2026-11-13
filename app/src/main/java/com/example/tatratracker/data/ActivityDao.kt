@@ -73,6 +73,14 @@ interface ActivityDao {
 
     @Query(
         """
+        SELECT * FROM activities
+        WHERE timestamp BETWEEN :fromMillis AND :toMillis
+        """
+    )
+    suspend fun getActivitiesStartedBetween(fromMillis: Long, toMillis: Long): List<ActivityEntity>
+
+    @Query(
+        """
         DELETE FROM activities
         WHERE id = :activityId
         """

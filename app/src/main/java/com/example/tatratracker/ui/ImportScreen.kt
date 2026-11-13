@@ -2,6 +2,7 @@ package com.example.tatratracker.ui
 
 import android.content.Intent
 import android.net.Uri
+import androidx.activity.compose.LocalActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -25,6 +26,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -37,7 +39,6 @@ import androidx.compose.ui.unit.dp
 import com.example.tatratracker.fit.ActivityImportManager
 import com.example.tatratracker.fit.ActivityImportResult
 import com.example.tatratracker.poi.ActivityPoiDetectionResult
-import com.example.tatratracker.poi.ActivityPoiDetector
 import com.example.tatratracker.poi.PoiHistoryRebuildResult
 import com.example.tatratracker.poi.PoiHistoryRebuilder
 import com.example.tatratracker.ui.components.TatraBadgeStyle
@@ -53,16 +54,24 @@ import com.example.tatratracker.ui.theme.TatraGreen
 import com.example.tatratracker.ui.theme.TatraGreenVerySoft
 import com.example.tatratracker.ui.theme.TatraSpacing
 import com.example.tatratracker.ui.theme.TatraTextMuted
+import com.example.tatratracker.viewmodel.SamsungHealthSyncViewModel
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
 @Composable
-fun ImportScreen() {
+fun ImportScreen(
+    syncViewModel: SamsungHealthSyncViewModel
+) {
 
     val context =
         LocalContext.current
+
+    // Okno zgód i rozwiązania błędów Samsung Health wymagają Activity.
+    val activity = LocalActivity.current
+
+    val syncState by syncViewModel.state.collectAsState()
 
     val scope =
         rememberCoroutineScope()
@@ -71,14 +80,6 @@ fun ImportScreen() {
         remember {
 
             ActivityImportManager(
-                context.applicationContext
-            )
-        }
-
-    val poiDetector =
-        remember {
-
-            ActivityPoiDetector(
                 context.applicationContext
             )
         }
@@ -174,7 +175,7 @@ fun ImportScreen() {
                     null
 
                 statusMessage =
-                    "Analizowanie i zapisywanie aktywności..."
+                    "Analizowanie i zapisywanie aktywności, sprawdzanie odwiedzonych miejsc..."
 
                 val importResult =
                     importManager
@@ -189,28 +190,8 @@ fun ImportScreen() {
                         importedActivity =
                             imported
 
-                        statusMessage =
-                            "Aktywność zapisana. Sprawdzam odwiedzone miejsca..."
-
-                        /*
-                         * Automatyczna analiza POI
-                         * dla właśnie importowanej
-                         * aktywności.
-                         */
-                        val poiResult =
-                            poiDetector
-                                .detectAndRegister(
-                                    activityId =
-                                        imported.activityId,
-                                    visitedAt =
-                                        imported.startTimeMillis
-                                            ?: System
-                                                .currentTimeMillis(),
-                                    trackPoints =
-                                        imported.trackPoints
-                                )
-
-                        poiResult
+                        // Analiza POI odbyła się już przy zapisie (ActivitySaver).
+                        imported.poiDetection
                             .onSuccess {
                                     detection ->
 
@@ -498,6 +479,22 @@ fun ImportScreen() {
                             poiDetectionMessage
                     )
                 }
+
+            /*
+             * =================================================
+             * SAMSUNG HEALTH
+             * =================================================
+             */
+
+            Spacer(modifier = Modifier.height(TatraSpacing.xs))
+
+            SamsungHealthSyncSection(
+                state = syncState,
+                onSync = { fullHistory ->
+                    activity?.let { syncViewModel.sync(it, fullHistory) }
+                },
+                enabled = activity != null && !isLoading && !isRebuildingHistory,
+            )
 
             /*
              * =================================================

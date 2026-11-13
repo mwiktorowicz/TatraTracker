@@ -5,9 +5,14 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -36,6 +41,7 @@ import com.example.tatratracker.ui.StatisticsScreen
 import com.example.tatratracker.ui.components.TatraBottomBar
 import com.example.tatratracker.ui.theme.TatraBackground
 import com.example.tatratracker.ui.theme.TatraTrackerTheme
+import com.example.tatratracker.viewmodel.SamsungHealthSyncViewModel
 
 class MainActivity :
     ComponentActivity() {
@@ -91,9 +97,23 @@ private fun TatraTrackerApp() {
             Screen.EditPlannedRoute.route
         )
 
+    // Wspólny dla całej aktywności: przy pierwszym utworzeniu uruchamia cichą
+    // synchronizację z Samsung Health, a ImportScreen pokazuje ten sam stan.
+    val samsungHealthSyncViewModel: SamsungHealthSyncViewModel = viewModel()
+
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    LaunchedEffect(samsungHealthSyncViewModel) {
+        samsungHealthSyncViewModel.importedEvents.collect { count ->
+            val noun = if (count == 1) "aktywność" else "aktywności"
+            snackbarHostState.showSnackbar("Zaimportowano $count $noun")
+        }
+    }
+
     Scaffold(
         containerColor =
             TatraBackground,
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         bottomBar = {
 
             if (
@@ -307,7 +327,7 @@ private fun TatraTrackerApp() {
                     Screen.Import.route
             ) {
 
-                ImportScreen()
+                ImportScreen(syncViewModel = samsungHealthSyncViewModel)
             }
 
             composable(

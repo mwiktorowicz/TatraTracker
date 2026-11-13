@@ -16,7 +16,10 @@ data class TcxTrackPoint(
 
 data class TcxActivityData(
     val startTimeMillis: Long?,
-    val durationSeconds: Double,
+    // Czas w ruchu: suma TotalTimeSeconds okrążeń
+    val movingSeconds: Double,
+    // Czas całkowity: ostatni − pierwszy znacznik czasu punktów; null, gdy brak lub > 24 h
+    val elapsedMillisFromPoints: Long?,
     val distanceMeters: Double,
     val calories: Int,
     val averageSpeedMetersPerSecond: Double,
@@ -418,8 +421,8 @@ object TcxParser {
             startTimeMillis =
                 activityStartTimeMillis,
 
-            durationSeconds =
-                totalDurationSeconds,
+            movingSeconds = totalDurationSeconds,
+            elapsedMillisFromPoints = elapsedMillisFromPoints(trackPoints.map { it.timestampMillis }),
 
             distanceMeters =
                 totalDistanceMeters,

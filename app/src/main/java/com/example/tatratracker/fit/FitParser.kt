@@ -20,7 +20,9 @@ data class FitActivityData(
     // Początek treningu jako Unix timestamp w milisekundach
     val startTimeMillis: Long?,
 
-    val durationSeconds: Double,
+    // Czas całkowity (total_elapsed_time) i w ruchu (total_timer_time); null = brak w pliku
+    val totalElapsedSeconds: Double?,
+    val totalTimerSeconds: Double?,
     val distanceMeters: Double,
     val calories: Int,
 
@@ -56,7 +58,8 @@ object FitParser {
 
         var sessionStartTimeMillis: Long? = null
 
-        var sessionDuration = 0.0
+        var sessionElapsedSeconds: Double? = null
+        var sessionTimerSeconds: Double? = null
         var sessionDistance = 0.0
         var sessionCalories = 0
 
@@ -153,12 +156,8 @@ object FitParser {
                         )
                 }
 
-                sessionDuration =
-                    session.totalTimerTime
-                        ?.toDouble()
-                        ?: session.totalElapsedTime
-                            ?.toDouble()
-                                ?: 0.0
+                sessionElapsedSeconds = session.totalElapsedTime?.toDouble()
+                sessionTimerSeconds = session.totalTimerTime?.toDouble()
 
                 sessionDistance =
                     session.totalDistance
@@ -316,8 +315,8 @@ object FitParser {
             startTimeMillis =
                 sessionStartTimeMillis,
 
-            durationSeconds =
-                sessionDuration,
+            totalElapsedSeconds = sessionElapsedSeconds,
+            totalTimerSeconds = sessionTimerSeconds,
 
             distanceMeters =
                 sessionDistance,

@@ -6,6 +6,7 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
+import com.example.tatratracker.fit.MAX_ELAPSED_FROM_POINTS_MILLIS
 
 @Database(
     entities = [
@@ -16,7 +17,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         SavedPlaceEntity::class,
         PoiVisitEntity::class
     ],
-    version = 8,
+    version = 9,
     exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -204,6 +205,53 @@ abstract class AppDatabase : RoomDatabase() {
                 }
             }
 
+        /*
+         * 8 → 9: osobny czas w ruchu.
+         * Do tej pory durationMillis przechowywało czas w ruchu (FIT: total_timer_time,
+         * TCX: suma TotalTimeSeconds), więc przenosimy go do movingDurationMillis.
+         * Czas całkowity odtwarzamy z punktów (ostatni − pierwszy znacznik czasu),
+         * tylko gdy wynik jest dłuższy od dotychczasowego i nie przekracza 24 h.
+         * Zapisanych prędkości i tempa nie przeliczamy.
+         */
+        private val MIGRATION_8_9 = object : Migration(8, 9) {
+
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+                    ALTER TABLE `activities`
+                    ADD COLUMN `movingDurationMillis` INTEGER NOT NULL DEFAULT 0
+                    """.trimIndent()
+                )
+
+                db.execSQL(
+                    """
+                    UPDATE `activities`
+                    SET `movingDurationMillis` = `durationMillis`
+                    """.trimIndent()
+                )
+
+                val elapsedFromPoints =
+                    """
+                    (
+                        SELECT (MAX(`timestampSeconds`) - MIN(`timestampSeconds`)) * 1000
+                        FROM `track_points`
+                        WHERE `track_points`.`activityId` = `activities`.`id`
+                            AND `timestampSeconds` IS NOT NULL
+                    )
+                    """.trimIndent()
+
+                db.execSQL(
+                    """
+                    UPDATE `activities`
+                    SET `durationMillis` = $elapsedFromPoints
+                    WHERE $elapsedFromPoints IS NOT NULL
+                        AND $elapsedFromPoints > `durationMillis`
+                        AND $elapsedFromPoints <= $MAX_ELAPSED_FROM_POINTS_MILLIS
+                    """.trimIndent()
+                )
+            }
+        }
+
         fun getDatabase(
             context: Context
         ): AppDatabase {
@@ -221,7 +269,8 @@ abstract class AppDatabase : RoomDatabase() {
                             .addMigrations(
                                 MIGRATION_5_6,
                                 MIGRATION_6_7,
-                                MIGRATION_7_8
+                                MIGRATION_7_8,
+                                MIGRATION_8_9
                             )
                             .build()
 

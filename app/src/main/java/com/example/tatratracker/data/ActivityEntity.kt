@@ -1,5 +1,6 @@
 package com.example.tatratracker.data
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 
@@ -13,7 +14,13 @@ data class ActivityEntity(
     val name: String,
     val sourceFileName: String = "",
 
+    // Czas całkowity: od startu do mety, z postojami
     val durationMillis: Long = 0L,
+
+    // Czas w ruchu: bez pauz; z niego liczone są średnia prędkość i tempo
+    @ColumnInfo(defaultValue = "0")
+    val movingDurationMillis: Long = 0L,
+
     val distanceMeters: Double = 0.0,
     val calories: Double = 0.0,
 
