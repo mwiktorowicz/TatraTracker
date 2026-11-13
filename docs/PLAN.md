@@ -21,7 +21,45 @@ Reguły dla wykonawcy:
 6. Nowy kod pisz w normalnym formatowaniu Kotlina (nie po jednym tokenie na linię, jak w istniejących plikach). Istniejących plików nie przeformatowuj bez osobnego zadania.
 7. Klucz `MAPTILER_API_KEY` jest w `local.properties` – nie wypisuj go i nie przenoś do repozytorium.
 
-## Aktualne zadanie: test Samsung Health (eksperyment)
+## Aktualne zadanie: synchronizacja z Samsung Health
+
+**Cel:** treningi nagrane opaską Galaxy Fit3 trafiają do TatraTracker bez pobierania plików ze Stravy. To już nie eksperyment: kod docelowy, z testami jednostkowymi logiki.
+
+**Wynik testu (2026-11-14, telefon Miłosza):** wpisy z aplikacji `com.sec.android.app.shealth` (urządzenie Galaxy Fit3) są kompletne – ok. 29 tys. punktów trasy na 8 h (mniej więcej 1 punkt/s), każdy z wysokością; log ok. 1 wpis/min z tętnem i prędkością; średnie i maks. tętno w sesji. `altitudeGain` jest puste. Każda wędrówka ma też drugi wpis z aplikacji `com.strava` (urządzenie: telefon) – 0 punktów, pusty log – to duplikat do pominięcia.
+
+**Decyzje (zatwierdzone przez Miłosza):**
+
+1. **Dwa czasy.**
+   - *Czas całkowity* = `endTime − startTime` sesji (od startu do mety, z postojami). To główny czas wędrówki: karty w historii, nagłówek szczegółów, rekord „Najdłuższa aktywność", „Łącznie" w statystykach. Zostaje w istniejącej kolumnie `durationMillis`.
+   - *Czas w ruchu* = `duration` sesji (bez pauz). Nowa kolumna `movingDurationMillis` w `ActivityEntity`. Używany do średniej prędkości i tempa oraz do pozycji „W ruchu" w statystykach. W szczegółach aktywności pokazać oba: „Czas całkowity" i „W ruchu"; jeśli różnica jest dodatnia, dodatkowo „Postoje".
+   - Migracja Room 8 → 9: dodać kolumnę, dla istniejących wierszy `movingDurationMillis = durationMillis`. Bez `fallbackToDestructiveMigration`. Wyeksportować schemat `9.json`.
+   - Import plików: sprawdź, co dziś trafia do `durationMillis` z FIT i TCX. Docelowo FIT: `total_elapsed_time` → całkowity, `total_timer_time` → w ruchu; TCX: różnica czasów pierwszego i ostatniego punktu → całkowity, `TotalTimeSeconds` → w ruchu. Jeśli któregoś brak, oba równe.
+2. **Typy treningów:** tylko HIKING (`PredefinedExerciseType.HIKING`). Wszystkie inne typy, także WALKING, są pomijane. Trzymaj listę dozwolonych typów w jednym miejscu (stała), żeby dało się ją łatwo rozszerzyć.
+3. **Filtr źródła:** tylko punkty danych z aplikacji `com.sec.android.app.shealth`, których sesja ma niepustą trasę (`route`). Wpisy innych aplikacji (np. `com.strava`) i treningi bez trasy pomijać.
+4. **Uruchamianie:**
+   - przycisk „Synchronizuj z Samsung Health" na `ImportScreen` (zakres: ostatnie 90 dni) oraz akcja „Pobierz całą historię";
+   - automatycznie raz na uruchomienie aplikacji, po cichu, tylko jeśli uprawnienia są już nadane (nigdy nie otwieraj okna zgód automatycznie); po zakończeniu krótki komunikat „Zaimportowano N aktywności", a gdy N = 0 – nic.
+   - Bez pracy w tle przy zamkniętej aplikacji.
+5. **Identyfikacja i duplikaty:**
+   - `sourceFileName = "samsung-health:<uid punktu danych>"` – ponowna synchronizacja nie dodaje tego samego treningu (istniejące `activityExists`);
+   - dodatkowo pomiń trening, jeśli w bazie jest aktywność z pliku o starcie w odległości do 5 minut i dystansie różniącym się o mniej niż 5%. (Sprawdź najpierw, co oznacza `ActivityEntity.timestamp` – ma to być czas startu.)
+6. **Mapowanie na istniejący model:**
+   - `ExerciseLocation` → `TrackPointEntity` (pozycja, `altitude`, czas);
+   - tętno i prędkość z `ExerciseLog` przypisz do punktów trasy: każdy punkt dostaje wartość z najbliższego czasowo wpisu logu, o ile jest nie dalej niż 90 s; inaczej `null`;
+   - podsumowanie (`ActivityEntity`): dystans, kalorie, średnie i maks. tętno, min/maks. wysokość z sesji, a gdy pole jest puste – policzone z punktów; średnia prędkość i tempo liczone z czasu w ruchu;
+   - nazwa: `customTitle`, a gdy pusta – typ + data (np. „Wędrówka 06.11.2026").
+7. **Dalsza obróbka:** po zapisie każda aktywność przechodzi tę samą ścieżkę co import pliku (wykrywanie POI przez `ActivityPoiDetector`). Wydziel wspólny kod zamiast go kopiować.
+8. **Architektura:** logika w osobnych klasach (np. pakiet `health/`): klient SDK, czysty mapper sesja → model, serwis synchronizacji. Stan ekranu w ViewModelu, nie w `remember`. Mapper i reguła duplikatów jako czyste funkcje z testami JUnit (przypisanie tętna do punktów, puste pola, duplikat/nie-duplikat, dwa czasy).
+9. **Błędy:** brak Samsung Health lub stara wersja → `ResolvablePlatformException.resolve(activity)`; brak uprawnień → czytelny komunikat z przyciskiem ponowienia; błąd jednej aktywności nie przerywa pozostałych – na końcu podsumowanie „zaimportowano X, pominięto Y, błędy Z".
+10. **Ekran testowy** (`SamsungHealthTestScreen`) zostaje do czasu potwierdzenia, że synchronizacja działa na telefonie; usunięcie będzie osobnym zadaniem.
+
+**Poza zakresem tego zadania:** suma podejść zapisywana w bazie (punkt 39), praca w tle, Health Connect, zmiany wyglądu.
+
+**Test na telefonie (Miłosz):** synchronizacja → w historii pojawiają się wędrówki z 28.10 i 06.11 po jednym razie; szczegóły pokazują trasę na mapie, profil wysokości, tętno, oba czasy; druga synchronizacja nic nie dodaje; statystyki i „Ukończone szlaki" uwzględniają nowe aktywności.
+
+**API SDK:** patrz sekcja „Zakończone: test Samsung Health" poniżej oraz działający kod w `ui/SamsungHealthTestScreen.kt` (stronicowanie, `getDeviceManager()`, obsługa wyjątków).
+
+## Zakończone: test Samsung Health (eksperyment)
 
 **Cel:** sprawdzić, czy treningi nagrane opaską Galaxy Fit3 da się pobrać z Samsung Health automatycznie, w zakresie odpowiadającym plikowi FIT/TCX ze Stravy (trasa GPS, czas, wysokość, tętno, prędkość). To spike: kod testowy, bez testów jednostkowych, do wyrzucenia albo przepisania po uzyskaniu odpowiedzi.
 
@@ -151,7 +189,7 @@ Reguły dla wykonawcy:
 
 ## Proponowana kolejność
 
-1. Test Samsung Health (trwa).
+1. Test Samsung Health (zrobione) → synchronizacja z Samsung Health (trwa).
 2. Porządki na mapie: 45–48.
 3. Etap „bez martwych przycisków": 1, 2, 6–10, 14.
 4. Makiety wyglądu (34), potem 23, 27, 29, 30.
@@ -164,3 +202,4 @@ Reguły dla wykonawcy:
 - 2026-11-13 – przegląd kodu, powstanie planu. Kod bez zmian.
 - 2026-11-13 – plik SDK w `app/libs/`, tryb deweloperski Data SDK włączony na telefonie, nazwy klas potwierdzone w `.aar`. Zadanie gotowe do wykonania w terminalu.
 - 2026-11-13 – test Samsung Health: nowy ekran `ui/SamsungHealthTestScreen.kt` (Więcej → Eksperymenty → „Test Samsung Health”), trasa w `Screen.kt` i `MainActivity.kt`, Gradle: SDK z `app/libs`, Gson 2.13.2, wtyczka parcelize (przez `libs.versions.toml`), Java 17. `assembleDebug` przechodzi. Rozbieżności z planem: (1) przy wbudowanym Kotlinie AGP 9 wtyczka parcelize nie dodaje `kotlin-parcelize-runtime`, a SDK używa `kotlinx.parcelize.Parceler` w runtime – bez tego klasy nie było w APK; dodana jawnie w wersji 2.2.10 (Kotlin z AGP). (2) `HealthDataStore.getDeviceManager()` jest w Kotlinie funkcją, nie właściwością. Odczyt pobiera kolejne strony, jeśli SDK zwróci `pageToken` (limit 50). Nazwa urządzenia z `getDeviceManager().getDevice(deviceId)`. Nie testowane na telefonie. Do sprawdzenia: okno zgód (ćwiczenia + lokalizacja ćwiczeń), trasa, wysokość w punktach, `altitudeGain`, tętno i prędkość w logu, urządzenie źródłowe (Fit3 czy telefon). Pełny stos błędu w logcat, tag `SamsungHealthTest`.
+- 2026-11-14 – test na telefonie udany (dane z Fit3 kompletne, wpisy Stravy to puste duplikaty, `altitudeGain` puste). Dopisano zadanie „synchronizacja z Samsung Health".
