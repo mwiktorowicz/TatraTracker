@@ -29,6 +29,7 @@ import com.example.tatratracker.ui.MoreScreen
 import com.example.tatratracker.ui.MyRoutesScreen
 import com.example.tatratracker.ui.OfflineMapsScreen
 import com.example.tatratracker.ui.PlannedRouteDetailsScreen
+import com.example.tatratracker.ui.SamsungHealthTestScreen
 import com.example.tatratracker.ui.SavedPlacesScreen
 import com.example.tatratracker.ui.SettingsScreen
 import com.example.tatratracker.ui.StatisticsScreen
@@ -83,6 +84,7 @@ private fun TatraTrackerApp() {
             Screen.DataExport.route,
             Screen.Backup.route,
             Screen.About.route,
+            Screen.SamsungHealthTest.route,
             Screen.Import.route,
             Screen.ActivityDetails.route,
             Screen.PlannedRouteDetails.route,
@@ -293,6 +295,9 @@ private fun TatraTrackerApp() {
                         navController.navigate(
                             Screen.About.route
                         )
+                    },
+                    onSamsungHealthTestClick = {
+                        navController.navigate(Screen.SamsungHealthTest.route)
                     }
                 )
             }
@@ -445,6 +450,10 @@ private fun TatraTrackerApp() {
                             .popBackStack()
                     }
                 )
+            }
+
+            composable(route = Screen.SamsungHealthTest.route) {
+                SamsungHealthTestScreen(onBack = { navController.popBackStack() })
             }
 
             composable(

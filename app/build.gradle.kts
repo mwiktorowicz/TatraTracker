@@ -8,6 +8,7 @@ import java.util.Properties
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.kotlin.parcelize)
 
     id("com.google.devtools.ksp") version "2.3.6"
 }
@@ -131,11 +132,12 @@ android {
 
     compileOptions {
 
+        // Samsung Health Data SDK wymaga Javy 17+.
         sourceCompatibility =
-            JavaVersion.VERSION_11
+            JavaVersion.VERSION_17
 
         targetCompatibility =
-            JavaVersion.VERSION_11
+            JavaVersion.VERSION_17
     }
 
     buildFeatures {
@@ -278,6 +280,17 @@ dependencies {
     implementation(
         "com.garmin:fit:21.205.0"
     )
+
+    // =====================================================
+    // SAMSUNG HEALTH DATA SDK (test)
+    // =====================================================
+
+    // Plik .aar pobierany ręcznie do app/libs/ (nie jest w repozytorium).
+    implementation(fileTree(mapOf("dir" to "libs", "include" to listOf("*.aar"))))
+    implementation("com.google.code.gson:gson:2.13.2")
+    // SDK używa kotlinx.parcelize.Parceler w runtime. Przy wbudowanym Kotlinie AGP 9
+    // wtyczka parcelize nie dodaje tej biblioteki sama. Wersja = Kotlin z AGP (2.2.10).
+    implementation("org.jetbrains.kotlin:kotlin-parcelize-runtime:2.2.10")
 
     // =====================================================
     // TESTY

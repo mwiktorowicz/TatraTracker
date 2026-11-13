@@ -18,6 +18,7 @@ import androidx.compose.material.icons.outlined.Landscape
 import androidx.compose.material.icons.outlined.Map
 import androidx.compose.material.icons.outlined.Place
 import androidx.compose.material.icons.outlined.Route
+import androidx.compose.material.icons.outlined.Science
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -46,7 +47,8 @@ fun MoreScreen(
     onSettingsClick: () -> Unit,
     onDataExportClick: () -> Unit,
     onBackupClick: () -> Unit,
-    onAboutClick: () -> Unit
+    onAboutClick: () -> Unit,
+    onSamsungHealthTestClick: () -> Unit
 ) {
     Column(
         modifier =
@@ -208,6 +210,24 @@ fun MoreScreen(
                         onClick = onAboutClick
                     )
                 }
+            }
+
+            Spacer(modifier = Modifier.height(TatraSpacing.xl))
+            TatraSectionHeader(title = "Eksperymenty")
+
+            TatraCard(modifier = Modifier.fillMaxWidth()) {
+                TatraListRow(
+                    title = "Test Samsung Health",
+                    subtitle = "Odczyt treningów z Samsung Health (Galaxy Fit3)",
+                    icon = Icons.Outlined.Science,
+                    badge = {
+                        TatraStatusBadge(
+                            text = "Test",
+                            style = TatraBadgeStyle.Neutral
+                        )
+                    },
+                    onClick = onSamsungHealthTestClick
+                )
             }
 
             Spacer(modifier = Modifier.height(TatraSpacing.xl))
