@@ -34,5 +34,8 @@ data class ActivityEntity(
     val maxAltitudeMeters: Double = 0.0,
 
     val avgHeartRate: Int = 0,
-    val maxHeartRate: Int = 0
+    val maxHeartRate: Int = 0,
+
+    // Notatka użytkownika; edytowalna razem z nazwą, synchronizacja jej nie nadpisuje
+    val note: String? = null
 )

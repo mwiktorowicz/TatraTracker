@@ -79,6 +79,10 @@ interface ActivityDao {
     )
     suspend fun getActivitiesStartedBetween(fromMillis: Long, toMillis: Long): List<ActivityEntity>
 
+    // Edycja przez użytkownika: tylko nazwa i notatka, dane z GPS zostają bez zmian.
+    @Query("UPDATE activities SET name = :name, note = :note WHERE id = :activityId")
+    suspend fun updateNameAndNote(activityId: Int, name: String, note: String?)
+
     @Query(
         """
         DELETE FROM activities

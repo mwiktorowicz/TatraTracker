@@ -49,31 +49,20 @@ object PlannedRouteGpxExporter {
 
         return buildString {
 
-            appendLine(
-                """<?xml version="1.0" encoding="UTF-8"?>"""
-            )
+            appendLine(GpxXml.XML_DECLARATION)
 
-            appendLine(
-                """
-                <gpx
-                    version="1.1"
-                    creator="TatraTracker"
-                    xmlns="http://www.topografix.com/GPX/1/1"
-                    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-                    xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd">
-                """.trimIndent()
-            )
+            appendLine(GpxXml.openGpxTag())
 
             appendLine(
                 "  <metadata>"
             )
 
             appendLine(
-                "    <name>${escapeXml(route.name)}</name>"
+                "    <name>${GpxXml.escapeXml(route.name)}</name>"
             )
 
             appendLine(
-                "    <desc>${escapeXml(buildDescription(route))}</desc>"
+                "    <desc>${GpxXml.escapeXml(buildDescription(route))}</desc>"
             )
 
             appendLine(
@@ -120,7 +109,7 @@ object PlannedRouteGpxExporter {
             )
 
             appendLine(
-                "    <name>${escapeXml(route.name)}</name>"
+                "    <name>${GpxXml.escapeXml(route.name)}</name>"
             )
 
             appendLine(
@@ -164,65 +153,11 @@ object PlannedRouteGpxExporter {
         routeName: String
     ): String {
 
-        val cleanName =
-            routeName
-                .trim()
-                .lowercase(
-                    Locale.getDefault()
-                )
-                .replace(
-                    "ą",
-                    "a"
-                )
-                .replace(
-                    "ć",
-                    "c"
-                )
-                .replace(
-                    "ę",
-                    "e"
-                )
-                .replace(
-                    "ł",
-                    "l"
-                )
-                .replace(
-                    "ń",
-                    "n"
-                )
-                .replace(
-                    "ó",
-                    "o"
-                )
-                .replace(
-                    "ś",
-                    "s"
-                )
-                .replace(
-                    "ź",
-                    "z"
-                )
-                .replace(
-                    "ż",
-                    "z"
-                )
-                .replace(
-                    Regex(
-                        "[^a-z0-9]+"
-                    ),
-                    "_"
-                )
-                .trim(
-                    '_'
-                )
-                .take(
-                    80
-                )
-
         val baseName =
-            cleanName.ifBlank {
-                "tatratracker_trasa"
-            }
+            GpxXml.fileNameBase(
+                text = routeName,
+                fallback = "tatratracker_trasa"
+            )
 
         return "$baseName.gpx"
     }
@@ -242,23 +177,23 @@ object PlannedRouteGpxExporter {
                 ?: fallbackName
 
         builder.appendLine(
-            "  <wpt lat=\"${formatCoordinate(point.latitude)}\" lon=\"${formatCoordinate(point.longitude)}\">"
+            "  <wpt lat=\"${GpxXml.formatCoordinate(point.latitude)}\" lon=\"${GpxXml.formatCoordinate(point.longitude)}\">"
         )
 
         point.altitudeMeters
             ?.let { altitude ->
 
                 builder.appendLine(
-                    "    <ele>${formatElevation(altitude)}</ele>"
+                    "    <ele>${GpxXml.formatElevation(altitude)}</ele>"
                 )
             }
 
         builder.appendLine(
-            "    <name>${escapeXml(displayName)}</name>"
+            "    <name>${GpxXml.escapeXml(displayName)}</name>"
         )
 
         builder.appendLine(
-            "    <type>${escapeXml(type)}</type>"
+            "    <type>${GpxXml.escapeXml(type)}</type>"
         )
 
         builder.appendLine(
@@ -277,18 +212,18 @@ object PlannedRouteGpxExporter {
         ) {
 
             builder.appendLine(
-                "      <trkpt lat=\"${formatCoordinate(point.latitude)}\" lon=\"${formatCoordinate(point.longitude)}\" />"
+                "      <trkpt lat=\"${GpxXml.formatCoordinate(point.latitude)}\" lon=\"${GpxXml.formatCoordinate(point.longitude)}\" />"
             )
 
             return
         }
 
         builder.appendLine(
-            "      <trkpt lat=\"${formatCoordinate(point.latitude)}\" lon=\"${formatCoordinate(point.longitude)}\">"
+            "      <trkpt lat=\"${GpxXml.formatCoordinate(point.latitude)}\" lon=\"${GpxXml.formatCoordinate(point.longitude)}\">"
         )
 
         builder.appendLine(
-            "        <ele>${formatElevation(elevationMeters)}</ele>"
+            "        <ele>${GpxXml.formatElevation(elevationMeters)}</ele>"
         )
 
         builder.appendLine(
@@ -431,55 +366,6 @@ object PlannedRouteGpxExporter {
             else ->
                 "$hours h $minutes min"
         }
-    }
-
-    private fun formatCoordinate(
-        value: Double
-    ): String {
-
-        return String.format(
-            Locale.US,
-            "%.7f",
-            value
-        )
-    }
-
-    private fun formatElevation(
-        value: Double
-    ): String {
-
-        return String.format(
-            Locale.US,
-            "%.1f",
-            value
-        )
-    }
-
-    private fun escapeXml(
-        value: String
-    ): String {
-
-        return value
-            .replace(
-                "&",
-                "&amp;"
-            )
-            .replace(
-                "<",
-                "&lt;"
-            )
-            .replace(
-                ">",
-                "&gt;"
-            )
-            .replace(
-                "\"",
-                "&quot;"
-            )
-            .replace(
-                "'",
-                "&apos;"
-            )
     }
 
     private fun distanceMeters(

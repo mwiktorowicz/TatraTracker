@@ -102,12 +102,6 @@ fun MoreScreen(
                         title = "Moje trasy",
                         subtitle = "Zapisane i zaplanowane przejścia",
                         icon = Icons.Outlined.Route,
-                        badge = {
-                            TatraStatusBadge(
-                                text = "Gotowy ekran",
-                                style = TatraBadgeStyle.Success
-                            )
-                        },
                         onClick = onMyRoutesClick
                     )
 
@@ -115,12 +109,6 @@ fun MoreScreen(
                         title = "Ukończone szlaki",
                         subtitle = "Postęp na tatrzańskiej sieci szlaków",
                         icon = Icons.Outlined.Map,
-                        badge = {
-                            TatraStatusBadge(
-                                text = "Matching później",
-                                style = TatraBadgeStyle.Info
-                            )
-                        },
                         onClick = onCompletedTrailsClick
                     )
 
@@ -128,12 +116,6 @@ fun MoreScreen(
                         title = "Schroniska i punkty",
                         subtitle = "Ulubione miejsca i zapisane POI",
                         icon = Icons.Outlined.Place,
-                        badge = {
-                            TatraStatusBadge(
-                                text = "Gotowy ekran",
-                                style = TatraBadgeStyle.Success
-                            )
-                        },
                         onClick = onSavedPlacesClick
                     )
                 }
@@ -149,7 +131,7 @@ fun MoreScreen(
                     icon = Icons.Outlined.DownloadForOffline,
                     badge = {
                         TatraStatusBadge(
-                            text = "Backend później",
+                            text = "Wkrótce",
                             style = TatraBadgeStyle.Info
                         )
                     },
@@ -181,7 +163,7 @@ fun MoreScreen(
                         icon = Icons.Outlined.FileUpload,
                         badge = {
                             TatraStatusBadge(
-                                text = "Backend później",
+                                text = "Wkrótce",
                                 style = TatraBadgeStyle.Info
                             )
                         },
@@ -194,7 +176,7 @@ fun MoreScreen(
                         icon = Icons.Outlined.Backup,
                         badge = {
                             TatraStatusBadge(
-                                text = "Backend później",
+                                text = "Wkrótce",
                                 style = TatraBadgeStyle.Info
                             )
                         },

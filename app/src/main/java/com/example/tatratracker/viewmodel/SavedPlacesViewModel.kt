@@ -3,12 +3,12 @@ package com.example.tatratracker.viewmodel
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import androidx.room.withTransaction
 import com.example.tatratracker.data.AppDatabase
 import com.example.tatratracker.data.PoiVisitEntity
 import com.example.tatratracker.data.PoiVisitSource
 import com.example.tatratracker.data.SavedPlaceCategory
 import com.example.tatratracker.data.SavedPlaceEntity
+import com.example.tatratracker.data.SavedPlaceRepository
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -28,6 +28,8 @@ class SavedPlacesViewModel(
     private val savedPlaceDao =
         database
             .savedPlaceDao()
+
+    private val savedPlaceRepository = SavedPlaceRepository(database)
 
     val places:
             StateFlow<List<SavedPlaceEntity>> =
@@ -108,6 +110,7 @@ class SavedPlacesViewModel(
                     emptyList()
             )
 
+    // Walidacja i zapis są w SavedPlaceRepository – tej samej logiki używa mapa.
     suspend fun savePlace(
         name: String,
         category: String,
@@ -115,84 +118,13 @@ class SavedPlacesViewModel(
         longitude: Double,
         note: String?
     ): Result<Long> {
-
-        return runCatching {
-
-            val cleanName =
-                name.trim()
-
-            require(
-                cleanName.isNotBlank()
-            ) {
-                "Nazwa punktu nie może być pusta."
-            }
-
-            require(
-                category in
-                        SavedPlaceCategory.all
-            ) {
-                "Niepoprawna kategoria punktu."
-            }
-
-            require(
-                latitude in
-                        -90.0..90.0
-            ) {
-                "Szerokość geograficzna musi być w zakresie -90 do 90."
-            }
-
-            require(
-                longitude in
-                        -180.0..180.0
-            ) {
-                "Długość geograficzna musi być w zakresie -180 do 180."
-            }
-
-            database.withTransaction {
-
-                val now =
-                    System.currentTimeMillis()
-
-                val placeId =
-                    savedPlaceDao
-                        .insertPlace(
-                            SavedPlaceEntity(
-                                name =
-                                    cleanName,
-                                category =
-                                    category,
-                                latitude =
-                                    latitude,
-                                longitude =
-                                    longitude,
-                                note =
-                                    note
-                                        ?.trim()
-                                        ?.takeIf {
-                                            it.isNotBlank()
-                                        },
-                                createdAt =
-                                    now
-                            )
-                        )
-
-                savedPlaceDao
-                    .insertVisit(
-                        PoiVisitEntity(
-                            placeId =
-                                placeId,
-                            activityId =
-                                null,
-                            visitedAt =
-                                now,
-                            source =
-                                PoiVisitSource.MANUAL
-                        )
-                    )
-
-                placeId
-            }
-        }
+        return savedPlaceRepository.savePlace(
+            name = name,
+            category = category,
+            latitude = latitude,
+            longitude = longitude,
+            note = note
+        )
     }
 
     /**

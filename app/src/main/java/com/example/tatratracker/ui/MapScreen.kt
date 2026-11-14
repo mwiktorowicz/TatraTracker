@@ -1023,7 +1023,7 @@ fun MapScreen(
 
                 featureDialog =
                     "Eksport GPX" to
-                            "Eksport gotowej trasy do GPX podepniemy w kolejnym etapie."
+                            "Eksport do GPX jest dostępny w szczegółach zapisanej trasy (Więcej → Moje trasy)."
             },
             onDuplicate = {
 
@@ -1063,9 +1063,30 @@ fun MapScreen(
                 showAddOwnPlaceDialog =
                     false
 
-                featureDialog =
-                    "Zapisany punkt" to
-                            "Punkt „$placeName” jest gotowy do podłączenia do warstwy danych."
+                // Punkt trafia w środek aktualnego widoku mapy.
+                val center = mapLibreMap?.cameraPosition?.target
+
+                if (center == null) {
+                    featureDialog =
+                        "Nie udało się zapisać punktu" to
+                            "Mapa jeszcze się nie wczytała. Spróbuj ponownie za chwilę."
+                } else {
+                    coroutineScope.launch {
+                        featureDialog =
+                            mapViewModel
+                                .saveOwnPlace(placeName, center.latitude, center.longitude)
+                                .fold(
+                                    onSuccess = {
+                                        "Punkt zapisany" to
+                                            "„$placeName” zapisano w Schroniska i punkty."
+                                    },
+                                    onFailure = { error ->
+                                        "Nie udało się zapisać punktu" to
+                                            (error.message ?: "Wystąpił nieznany błąd zapisu.")
+                                    }
+                                )
+                    }
+                }
             }
         )
     }

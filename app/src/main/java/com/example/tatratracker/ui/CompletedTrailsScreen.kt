@@ -22,6 +22,8 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.tatratracker.data.COMPLETED_TRAIL_THRESHOLD
+import com.example.tatratracker.data.TrailProgressState
 import com.example.tatratracker.ui.components.TatraCard
 import com.example.tatratracker.ui.components.TatraErrorState
 import com.example.tatratracker.ui.components.TatraLoadingState
@@ -36,8 +38,6 @@ import com.example.tatratracker.ui.theme.TatraGreen
 import com.example.tatratracker.ui.theme.TatraGreenVerySoft
 import com.example.tatratracker.ui.theme.TatraSpacing
 import com.example.tatratracker.ui.theme.TatraTextMuted
-import com.example.tatratracker.viewmodel.COMPLETED_TRAIL_THRESHOLD
-import com.example.tatratracker.viewmodel.CompletedTrailsUiState
 import com.example.tatratracker.viewmodel.CompletedTrailsViewModel
 import java.util.Locale
 import kotlin.math.roundToInt
@@ -198,7 +198,7 @@ fun CompletedTrailsScreen(
 }
 
 private fun summaryTitle(
-    state: CompletedTrailsUiState
+    state: TrailProgressState
 ): String {
     val result = state.result
 
@@ -221,7 +221,7 @@ private fun summaryTitle(
 }
 
 private fun summaryMessage(
-    state: CompletedTrailsUiState
+    state: TrailProgressState
 ): String {
     val result = state.result
 
@@ -254,7 +254,7 @@ private fun formatKilometers(
     )
 }
 
-private fun formatPercent(
+internal fun formatPercent(
     fraction: Double
 ): String {
     return String.format(

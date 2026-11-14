@@ -6,6 +6,8 @@ import androidx.lifecycle.viewModelScope
 import com.example.tatratracker.data.ActivityEntity
 import com.example.tatratracker.data.AppDatabase
 import com.example.tatratracker.data.TrackPointEntity
+import com.example.tatratracker.data.TrailProgressRepository
+import com.example.tatratracker.data.TrailProgressState
 import java.time.Instant
 import java.time.LocalDate
 import java.time.Year
@@ -90,6 +92,10 @@ class StatisticsViewModel(
 
     val uiState: StateFlow<StatisticsUiState> =
         _uiState.asStateFlow()
+
+    // Postęp na szlakach – ten sam wynik co na ekranie „Ukończone szlaki”, liczony raz.
+    val trailProgress: StateFlow<TrailProgressState> =
+        TrailProgressRepository.getInstance(application).state
 
     init {
         observeStatistics()

@@ -42,6 +42,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.tatratracker.data.TrailProgressState
 import com.example.tatratracker.ui.components.TatraBadgeStyle
 import com.example.tatratracker.ui.components.TatraCard
 import com.example.tatratracker.ui.components.TatraEmptyState
@@ -72,6 +73,7 @@ fun StatisticsScreen(
     viewModel: StatisticsViewModel = viewModel()
 ) {
     val state by viewModel.uiState.collectAsState()
+    val trailProgress by viewModel.trailProgress.collectAsState()
 
     Column(
         modifier =
@@ -112,6 +114,7 @@ fun StatisticsScreen(
             }
 
             CompletedTrailsProgressCard(
+                progress = trailProgress,
                 onClick = onCompletedTrailsClick
             )
 
@@ -595,8 +598,21 @@ private fun RecordCard(
 
 @Composable
 private fun CompletedTrailsProgressCard(
+    progress: TrailProgressState,
     onClick: () -> Unit
 ) {
+    // Te same wartości co na ekranie „Ukończone szlaki” (wspólny TrailProgressRepository).
+    val result = progress.result
+    val completedFraction = result?.completedFraction?.toFloat()?.coerceIn(0f, 1f) ?: 0f
+
+    val summary =
+        when {
+            progress.isLoading -> "Liczę postęp…"
+            progress.errorMessage != null -> "Nie udało się policzyć postępu."
+            result == null -> "Brak wyniku."
+            else -> "Ukończono ${progress.completedTrailCount} z ${progress.totalTrailCount} szlaków"
+        }
+
     Column {
         TatraSectionHeader(title = "Postęp w Tatrach")
 
@@ -638,8 +654,7 @@ private fun CompletedTrailsProgressCard(
                         )
 
                         Text(
-                            text =
-                                "Miejsce na procent przejścia całej sieci szlaków.",
+                            text = "Przebyta część sieci szlaków TPN i TANAP",
                             color = TatraTextMuted,
                             style = MaterialTheme.typography.bodySmall,
                             modifier = Modifier.padding(top = 3.dp)
@@ -647,7 +662,7 @@ private fun CompletedTrailsProgressCard(
                     }
 
                     Text(
-                        text = "—%",
+                        text = result?.let { formatPercent(it.completedFraction) } ?: "—%",
                         color = TatraDark,
                         style = MaterialTheme.typography.headlineSmall
                     )
@@ -664,7 +679,17 @@ private fun CompletedTrailsProgressCard(
                                 color = TatraSurfaceStrong,
                                 shape = RoundedCornerShape(99.dp)
                             )
-                )
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth(completedFraction)
+                            .height(8.dp)
+                            .background(
+                                color = TatraGreen,
+                                shape = RoundedCornerShape(99.dp)
+                            )
+                    )
+                }
 
                 Row(
                     modifier =
@@ -674,8 +699,7 @@ private fun CompletedTrailsProgressCard(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text =
-                            "Procent pojawi się po spięciu track matchingu z bazą szlaków.",
+                        text = summary,
                         color = TatraTextMuted,
                         style = MaterialTheme.typography.bodySmall,
                         modifier = Modifier.weight(1f)

@@ -17,7 +17,7 @@ import com.example.tatratracker.fit.MAX_ELAPSED_FROM_POINTS_MILLIS
         SavedPlaceEntity::class,
         PoiVisitEntity::class
     ],
-    version = 9,
+    version = 10,
     exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -252,6 +252,14 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        // 9 → 10: notatka użytkownika przy aktywności (opcjonalna).
+        private val MIGRATION_9_10 = object : Migration(9, 10) {
+
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE `activities` ADD COLUMN `note` TEXT")
+            }
+        }
+
         fun getDatabase(
             context: Context
         ): AppDatabase {
@@ -270,7 +278,8 @@ abstract class AppDatabase : RoomDatabase() {
                                 MIGRATION_5_6,
                                 MIGRATION_6_7,
                                 MIGRATION_7_8,
-                                MIGRATION_8_9
+                                MIGRATION_8_9,
+                                MIGRATION_9_10
                             )
                             .build()
 

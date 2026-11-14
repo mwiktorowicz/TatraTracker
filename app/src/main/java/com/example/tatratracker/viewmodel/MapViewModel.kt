@@ -5,6 +5,8 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.tatratracker.data.AppDatabase
 import com.example.tatratracker.data.MapLayerSettingsStore
+import com.example.tatratracker.data.SavedPlaceCategory
+import com.example.tatratracker.data.SavedPlaceRepository
 import com.example.tatratracker.data.TrackPointMapper
 import com.example.tatratracker.model.TrackPoint
 import com.example.tatratracker.ui.map.MapLayerSettings
@@ -23,6 +25,8 @@ class MapViewModel(
         AppDatabase
             .getDatabase(application)
             .activityDao()
+
+    private val savedPlaceRepository = SavedPlaceRepository(AppDatabase.getDatabase(application))
 
     private val _tracks =
         MutableStateFlow<List<List<TrackPoint>>>(
@@ -53,6 +57,17 @@ class MapViewModel(
         viewModelScope.launch {
             layerSettingsStore.save(settings)
         }
+    }
+
+    /** „Dodaj własny punkt”: zapis w Schroniskach i punktach, kategoria „Inne”. */
+    suspend fun saveOwnPlace(name: String, latitude: Double, longitude: Double): Result<Long> {
+        return savedPlaceRepository.savePlace(
+            name = name,
+            category = SavedPlaceCategory.OTHER,
+            latitude = latitude,
+            longitude = longitude,
+            note = null
+        )
     }
 
     private fun loadLayerSettings() {

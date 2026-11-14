@@ -1,5 +1,7 @@
 package com.example.tatratracker.ui
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -35,6 +37,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.tatratracker.data.ActivityEntity
+import com.example.tatratracker.export.ActivityGpxExporter
 import com.example.tatratracker.model.TrackPoint
 import com.example.tatratracker.ui.components.TatraBadgeStyle
 import com.example.tatratracker.ui.components.TatraCard
@@ -69,10 +72,25 @@ fun ActivityDetailsScreen(
     val trackPoints by viewModel.trackPoints.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val isDeleted by viewModel.isDeleted.collectAsState()
+    val message by viewModel.message.collectAsState()
 
     var showDeleteDialog by remember {
         mutableStateOf(false)
     }
+
+    var showEditDialog by remember {
+        mutableStateOf(false)
+    }
+
+    // Plik zapisuje ViewModel; tutaj tylko systemowe okno wyboru miejsca zapisu.
+    val createGpxLauncher =
+        rememberLauncherForActivityResult(
+            ActivityResultContracts.CreateDocument("application/gpx+xml")
+        ) { uri ->
+            if (uri != null) {
+                viewModel.exportGpx(uri)
+            }
+        }
 
     var featureDialog by remember {
         mutableStateOf<ActivityFeatureDialog?>(null)
@@ -132,6 +150,29 @@ fun ActivityDetailsScreen(
         )
     }
 
+    message?.let { current ->
+        TatraFeatureDialog(
+            title = current.title,
+            message = current.message,
+            onDismiss = viewModel::consumeMessage
+        )
+    }
+
+    val editedActivity = activity
+    if (showEditDialog && editedActivity != null) {
+        ActivityEditDialog(
+            initialName = editedActivity.name,
+            initialNote = editedActivity.note,
+            onDismiss = {
+                showEditDialog = false
+            },
+            onSave = { name, note ->
+                showEditDialog = false
+                viewModel.saveDetails(name, note)
+            }
+        )
+    }
+
     Column(
         modifier =
             Modifier
@@ -172,20 +213,23 @@ fun ActivityDetailsScreen(
                     modifier = Modifier.weight(1f),
                     trackPoints = trackPoints,
                     onEdit = {
-                        featureDialog =
-                            ActivityFeatureDialog(
-                                title = "Edycja aktywności",
-                                message =
-                                    "Edycja nazwy, daty i podstawowych informacji jest już przygotowana w interfejsie. Podepniemy zapis zmian w kolejnym etapie warstwy danych."
-                            )
+                        showEditDialog = true
                     },
                     onExport = {
-                        featureDialog =
-                            ActivityFeatureDialog(
-                                title = "Eksport GPX",
-                                message =
-                                    "Eksport śladu tej aktywności do pliku GPX podepniemy razem z pozostałymi operacjami na plikach."
+                        val current = activity!!
+
+                        // Okno „Utwórz dokument” od razu tworzy plik, więc pusty ślad blokujemy wcześniej.
+                        if (trackPoints.isEmpty()) {
+                            featureDialog =
+                                ActivityFeatureDialog(
+                                    title = "Nie można wyeksportować aktywności",
+                                    message = ActivityGpxExporter.EMPTY_TRACK_MESSAGE
+                                )
+                        } else {
+                            createGpxLauncher.launch(
+                                ActivityGpxExporter.suggestedFileName(current.name, current.timestamp)
                             )
+                        }
                     },
                     onDelete = {
                         showDeleteDialog = true
@@ -257,6 +301,22 @@ private fun ActivityDetailsContent(
                         color = TatraTextMuted,
                         style = MaterialTheme.typography.bodySmall,
                         modifier = Modifier.padding(top = 10.dp)
+                    )
+                }
+
+                activity.note?.takeIf { it.isNotBlank() }?.let { note ->
+                    Text(
+                        text = "Notatka",
+                        color = TatraTextMuted,
+                        style = MaterialTheme.typography.labelMedium,
+                        modifier = Modifier.padding(top = 12.dp)
+                    )
+
+                    Text(
+                        text = note,
+                        color = TatraDark,
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.padding(top = 2.dp)
                     )
                 }
             }

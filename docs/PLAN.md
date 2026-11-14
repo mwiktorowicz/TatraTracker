@@ -21,7 +21,36 @@ Reguły dla wykonawcy:
 6. Nowy kod pisz w normalnym formatowaniu Kotlina (nie po jednym tokenie na linię, jak w istniejących plikach). Istniejących plików nie przeformatowuj bez osobnego zadania.
 7. Klucz `MAPTILER_API_KEY` jest w `local.properties` – nie wypisuj go i nie przenoś do repozytorium.
 
-## Aktualne zadanie: koniec martwych przycisków (część 1)
+## Aktualne zadanie: mapa – przebyte szlaki i moje punkty
+
+**Cel:** dwie nowe warstwy na mapie głównej: szlaki, które Miłosz już przeszedł (punkt 9), oraz jego zapisane miejsca (rozbieżność 1 z poprzedniego zadania). Obie z przełącznikiem w panelu „Warstwy", zapamiętywanym jak pozostałe.
+
+**Stan zastany:** `TrailMatchResult.matchedGeoJson` zawiera geometrię dopasowanych odcinków; wynik udostępnia `data/TrailProgressRepository` (jeden na proces). Mapa nie czyta tabeli `saved_places`. W panelu warstw sekcja „Ukończone szlaki" to nieaktywny wiersz z plakietką „Wkrótce".
+
+**1. Warstwa „Przebyte szlaki"**
+- Źródło GeoJSON z `matchedGeoJson`, pobierane z `TrailProgressRepository` przez `MapViewModel`. Warstwa odświeża się, gdy repozytorium poda nowy wynik (np. po synchronizacji).
+- Wygląd: szeroka, półprzezroczysta zielona poświata (kolor z motywu, `TatraGreen`) narysowana **pod** kolorowymi liniami szlaków i nad podkładem mapy, tak żeby kolor szlaku pozostał czytelny. Szerokość skalowana z przybliżeniem, ok. 3× szerokości linii szlaku.
+- W panelu: wiersz „Przebyte szlaki" z podpisem „Odcinki, które masz już za sobą" i przełącznikiem zamiast plakietki „Wkrótce"; przenieś go do sekcji *Mapa* (pod „Moje ślady GPS") i usuń osobną sekcję „Ukończone szlaki".
+- Domyślnie wyłączona. Dopasowanie jest kosztowne, więc mapa prosi repozytorium o wynik dopiero po włączeniu przełącznika (albo gdy przełącznik był zapisany jako włączony). W trakcie liczenia przy wierszu mały wskaźnik postępu; przy błędzie krótki komunikat, przełącznik zostaje włączony.
+- Brak dopasowanych odcinków = pusta warstwa, bez komunikatu.
+
+**2. Warstwa „Moje punkty"**
+- Źródło GeoJSON z `SavedPlaceDao.getAllPlaces()` (Flow) przez `MapViewModel`/`SavedPlaceRepository`; nowy punkt dodany z mapy pojawia się od razu, usunięty znika.
+- Symbol według kategorii: `HUT` – istniejąca ikona schroniska, `MOUNTAIN` – istniejąca ikona szczytu, `OTHER` – nowa prosta ikona pinezki (wektor w `res/drawable`, w stylu pozostałych `ic_map_*`). Ikony zapisanych miejsc mają się odróżniać od zwykłych POI mapy (np. kolor akcentu lub obwódka). Pod symbolem nazwa.
+- W panelu: przełącznik „Moje punkty" z podpisem „Zapisane miejsca i własne punkty" w sekcji *Punkty*. Domyślnie włączona.
+- Dotknięcie punktu: bez nowej obsługi (poza zakresem).
+
+**3. Ustawienia** – dwa nowe pola w `MapLayerSettings` i klucze w `MapLayerSettingsStore` (domyślnie: przebyte szlaki wyłączone, moje punkty włączone); starsze zapisane ustawienia muszą się wczytywać bez błędu. Uzupełnij istniejące testy mapowania ustawień.
+
+**Poza zakresem:** zapis wyniku dopasowania w bazie (punkt 38), szczegóły szlaku po dotknięciu (22), okno szczegółów zapisanego miejsca po dotknięciu, zmiany w ekranie „Ukończone szlaki".
+
+**Test na telefonie (Miłosz):** Warstwy → włącz „Przebyte szlaki": po chwili odcinki z Twoich wędrówek są podświetlone na zielono, a kolory szlaków nadal widać; po wyłączeniu poświata znika; ustawienie zostaje po restarcie aplikacji. „Moje punkty": punkt dodany przez Warstwy → „Dodaj własny punkt" pojawia się na mapie od razu; po usunięciu go w Więcej → Schroniska i punkty znika z mapy; przełącznik go ukrywa.
+
+## Zakończone: koniec martwych przycisków (część 1)
+
+**Decyzje po rozbieżnościach (2026-11-14):** (1) mapa nie pokazywała zapisanych miejsc – warstwa „Moje punkty" wchodzi do zadania powyżej; (2) brak wysokości zapisany jako 0.0 – w eksporcie GPX wysokość równa dokładnie 0.0 jest traktowana jako brak (pomijany `ele`); zmiana modelu na `ele: Double?` dopisana do listy jako punkt 55.
+
+Opis zadania:
 
 **Cel:** przyciski, które dziś otwierają okienko „podepniemy później", zaczynają działać, a opisy w aplikacji przestają mówić o rzeczach już zrobionych. Punkty 6, 7, 8, 10 z listy. Wykonuj podpunkty w podanej kolejności; po każdym projekt ma się budować.
 
@@ -256,11 +285,13 @@ Reguły dla wykonawcy:
 53. `ImportScreen` bez ViewModelu – obrót ekranu gubi stan importu.
 54. „Importuj GPX" na mapie był zaślepką (okienko „podepniemy w kolejnym etapie"), a opis mówił „ślad lub trasę"; prawdziwy import zaplanowanej trasy był tylko w „Moich trasach". Zrobione w zadaniu „porządki na mapie": „Importuj trasę GPX" na mapie importuje zaplanowaną trasę wspólnym kodem z „Moimi trasami".
 
+55. `TrackPoint.ele` jako `Double?`: brak wysokości zapisywany jako `null` zamiast 0.0 (import FIT/TCX, Samsung Health, wykresy, statystyki). Stare wiersze z 0.0 wymagają osobnej decyzji.
+
 ## Proponowana kolejność
 
 1. Test Samsung Health i synchronizacja z Samsung Health (zrobione, 24).
 2. Porządki na mapie: 45–48 (zrobione).
-3. Etap „bez martwych przycisków": część 1 – 6, 7, 8, 10 (trwa); potem 9; potem 1, 2, 14.
+3. Etap „bez martwych przycisków": część 1 – 6, 7, 8, 10 (zrobione); 9 + warstwa „Moje punkty" (trwa); potem 1, 2, 14.
 4. Makiety wyglądu (34), potem 23, 27, 29, 30.
 5. Kopia, eksport, mapy offline: 3–5.
 6. Nagrywanie na żywo: 12, 13, 16.
@@ -280,3 +311,10 @@ Reguły dla wykonawcy:
   - Ustalenia wykonawcy (do ewentualnej korekty): DataStore 1.2.1 zamiast najnowszej 1.3.0 – 1.3.0 wymaga `kotlin-stdlib` 2.2.20, nowszej niż Kotlin wbudowany w AGP (2.2.10); 1.2.1 nie podbija żadnej zależności (coroutines 1.9.0 już były w projekcie). Ustawienia wczytywane raz przy otwarciu mapy; jeśli użytkownik przełączy warstwę przed końcem odczytu, wygrywa jego wybór. Zanim przyjdą zapisane ustawienia, przez ułamek sekundy mogą obowiązywać domyślne (w praktyce odczyt DataStore kończy się przed wczytaniem stylu mapy z sieci). `MapLayerSettingsStore` w pakiecie `data` zależy od `ui.map.MapLayerSettings` – przeniesienie klasy poza zakresem. Kliknięcie akcji w panelu zamyka panel. „Dodaj własny punkt" nadal kończy się komunikatem „gotowy do podłączenia" (punkt 8).
   - Nie testowane na telefonie: wszystko z sekcji „Test na telefonie" zadania, w szczególności pamięć warstw po restarcie aplikacji i import GPX z mapy (poprawny i błędny plik).
 - 2026-11-14 – porządki na mapie przetestowane na telefonie przez Miłosza: działa; zmiany na `main`. Dopisano zadanie „koniec martwych przycisków (część 1)".
+- 2026-11-14 – koniec martwych przycisków, część 1 (kod). (1) Edycja aktywności: kolumna `note` w `ActivityEntity`, Room 10 (`MIGRATION_9_10` – samo `ALTER TABLE … ADD COLUMN note TEXT`), schemat `10.json`, `ActivityDao.updateNameAndNote`, okno `ui/ActivityEditDialog.kt`, zapis w `ActivityDetailsViewModel.saveDetails`; notatka w górnej karcie szczegółów. Synchronizacja z Samsung Health bez zmian – pomija istniejące (`activityExists`), a `ActivitySaver` tylko wstawia, więc nazwy i notatki nie nadpisze. (2) Eksport GPX aktywności: wspólny `export/GpxXml.kt` (nagłówek, escapowanie, formatowanie, nazwa pliku), czysty `export/ActivityGpxExporter.kt`; `PlannedRouteGpxExporter` korzysta z `GpxXml` (plik trasy porównany bajt w bajt przed i po zmianie – identyczny). Okno „Utwórz dokument” jak w szczegółach trasy, plik zapisuje `ActivityDetailsViewModel.exportGpx` poza wątkiem UI; komunikat po zapisie i przy błędzie. (3) Własny punkt z mapy: wspólny `data/SavedPlaceRepository.kt` (logika z `SavedPlacesViewModel.savePlace`, który teraz go woła), `MapViewModel.saveOwnPlace` (kategoria `OTHER`, środek widoku mapy), komunikat „„nazwa" zapisano w Schroniska i punkty", nowy opis w `AddOwnPlaceDialog`. (4) `data/TrailProgressRepository.kt` – jeden wynik dopasowania na proces (przeniesione tu `COMPLETED_TRAIL_THRESHOLD` i stan, teraz `TrailProgressState`); korzystają z niego `CompletedTrailsViewModel` i `StatisticsViewModel`. Karta „Postęp w Tatrach" w Statystykach: procent (ten sam `formatPercent` co „Ukończone szlaki"), pasek, „Ukończono X z Y szlaków", „Liczę postęp…", „Nie udało się policzyć postępu.". Więcej: usunięte „Gotowy ekran" ×2 i „Matching później", „Backend później" → „Wkrótce" ×3. Mapa, okno akcji trasy: „Eksport … podepniemy w kolejnym etapie." → „Eksport do GPX jest dostępny w szczegółach zapisanej trasy (Więcej → Moje trasy)." Inne nieaktualne teksty poza wyłączonymi ekranami – nie znalezione. Testy JUnit: 7 nowych (`ActivityGpxExporterTest`); `assembleDebug` i `testDebugUnitTest` przechodzą (51 testów).
+  - **Rozbieżność 1 (zasada 5): mapa główna nie pokazuje zapisanych miejsc.** `MapScreen`/`MapLayers` nie czytają `saved_places`; pinezka jest tylko na podglądzie jednego miejsca (`SavedPlaceFocusMap`). Warstwy nie dobudowano. Propozycja: warstwa GeoJSON z `SavedPlaceDao.getAllPlaces()` przez `MapViewModel`, symbol wg kategorii, przełącznik „Moje punkty" w sekcji *Punkty* panelu warstw (zapamiętywany jak pozostałe); można to zrobić razem z punktem 9 albo jako osobne zadanie.
+  - **Rozbieżność 2 (zasada 5): brak wysokości jest w bazie zapisany jako 0.0, nie `null`.** Model `TrackPoint.ele` nie dopuszcza `null`, a FIT, TCX (`ActivityImportManager`: `ele = altitudeMeters ?: 0.0`) i Samsung Health (`SamsungHealthSessionMapper`: `altitude ?: 0.0`) zamieniają brak na 0. Eksporter pomija `ele` tylko przy `null`, więc dla takich punktów zapisze `<ele>0.0</ele>`. Do decyzji: (a) w eksporcie traktować 0.0 jako brak (proste, w Tatrach nie występuje), albo (b) `TrackPoint.ele: Double?` i zapis `null` przy imporcie (szersza zmiana, dotyczy też wykresów i statystyk; starych wierszy z 0.0 to nie naprawi).
+  - Ustalenia wykonawcy (do ewentualnej korekty): tętno ≤ 0 pomijane w GPX; w `metadata` oprócz nazwy czas startu aktywności; przestrzeń nazw `gpxtpx` zawsze w nagłówku; proponowana nazwa pliku `<nazwa>_<rrrr-mm-dd>.gpx` (data lokalna startu, np. `wedrowka_06_11_2026_2026-11-06.gpx`); aktywność bez punktów GPS jest blokowana przed otwarciem okna zapisu (to okno od razu tworzy pusty plik); po udanej edycji brak okienka (zmianę widać od razu), okienko tylko przy błędzie; punkt z mapy dostaje wizytę MANUAL, tak jak dodany na ekranie „Schroniska i punkty"; gdy mapa jeszcze się nie wczytała, zapis punktu kończy się komunikatem zamiast zapisu w domyślnym miejscu. Postęp szlaków: liczenie rusza przy pierwszym otwarciu Statystyk albo „Ukończonych szlaków" i od tej chwili, póki żyje proces aplikacji, przelicza się po każdym imporcie lub usunięciu aktywności – także gdy żaden z tych ekranów nie jest otwarty (np. po automatycznej synchronizacji); w trakcie przeliczania Statystyki pokazują poprzedni procent z podpisem „Liczę postęp…".
+  - Nie testowane na telefonie: wszystko z sekcji „Test na telefonie" zadania, w szczególności migracja 9 → 10 na prawdziwej bazie, otwarcie wyeksportowanego GPX w innej aplikacji i czas eksportu treningu z ok. 29 tys. punktów.
+- 2026-11-14 – część 1 przetestowana na telefonie przez Miłosza: działa. Rozstrzygnięto rozbieżności 1 i 2 (patrz „Zakończone: koniec martwych przycisków"). Dopisano zadanie „mapa – przebyte szlaki i moje punkty" oraz punkt 55.
+- 2026-11-14 – poprawka po rozbieżności 2: `ActivityGpxExporter` traktuje wysokość równą dokładnie 0.0 jako brak (bez `ele`; punkt bez innych danych jest samozamykający). Test JUnit `zeroAltitude_isTreatedAsMissing`; `assembleDebug` i `testDebugUnitTest` przechodzą (52 testy). Model i import bez zmian (punkt 55).

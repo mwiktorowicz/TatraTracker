@@ -34,7 +34,7 @@ internal fun AddOwnPlaceDialog(
         text = {
             Column {
                 Text(
-                    text = "Docelowo punkt zostanie zapisany w centrum aktualnego widoku mapy. Później dodamy również wybór dokładnej pozycji przez dotknięcie mapy.",
+                    text = "Punkt zostanie zapisany w środku aktualnego widoku mapy, w kategorii „Inne”. Znajdziesz go w Więcej → Schroniska i punkty.",
                     color = TatraTextMuted,
                     style = MaterialTheme.typography.bodyMedium
                 )
