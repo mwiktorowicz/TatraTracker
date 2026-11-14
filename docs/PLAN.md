@@ -21,7 +21,35 @@ Reguły dla wykonawcy:
 6. Nowy kod pisz w normalnym formatowaniu Kotlina (nie po jednym tokenie na linię, jak w istniejących plikach). Istniejących plików nie przeformatowuj bez osobnego zadania.
 7. Klucz `MAPTILER_API_KEY` jest w `local.properties` – nie wypisuj go i nie przenoś do repozytorium.
 
-## Aktualne zadanie: synchronizacja z Samsung Health
+## Aktualne zadanie: porządki na mapie
+
+**Cel:** jeden przycisk i jeden panel warstw zamiast trzech dublujących się, ikony zgodne z działaniem, zapamiętywanie ustawień warstw. Przy okazji usunięcie ekranu testowego Samsung Health. Punkty 45–48 z listy.
+
+**Stan zastany:** w `ui/MapScreen.kt` w prawym górnym rogu są trzy przyciski: „Punkty" (`MapPoiToolsPanel`), „Warstwy" (`MapLayersPanel`), „Szlaki" (`MapTrailToolsPanel`). „Warstwy" zawiera przełączniki obu pozostałych. Ustawienia (`MapLayerSettings`) są w `remember` i giną po wyjściu z mapy.
+
+**Do zrobienia:**
+
+1. **Jeden przycisk „Warstwy"** (ikona `Layers`) w prawym górnym rogu. Usuń przyciski „Punkty" i „Szlaki" oraz stany `showPoiPanel` i `showTrailToolsPanel`.
+2. **Jeden panel** (`MapLayersPanel`) z sekcjami w tej kolejności:
+   - *Mapa:* Szlaki, Poziomice, Moje ślady GPS;
+   - *Punkty:* Szczyty, Schroniska, Jaskinie, Jeziora i stawy;
+   - *Ukończone szlaki:* wiersz z plakietką „Wkrótce", nieaktywny (do punktu 9);
+   - *Akcje:* „Dodaj własny punkt" (otwiera istniejący `AddOwnPlaceDialog`) oraz „Importuj trasę GPX" z podpisem „Dodaj zaplanowaną trasę z pliku" (istniejące działanie importu, poprawiony opis).
+   - Każdy przełącznik występuje dokładnie raz. Obecna etykieta „Moje trasy" przy przełączniku `gpsTracks` zmienia się na „Moje ślady GPS".
+   - Panel przewijany, jeśli nie mieści się na ekranie.
+3. Usuń `MapPoiToolsPanel` i `MapTrailToolsPanel` (pliki `MapPoiTools.kt`, `MapTrailTools.kt`), zachowując `AddOwnPlaceDialog` (przenieś do osobnego pliku).
+4. **Ikony:**
+   - przycisk centrujący na Tatrach: zamiast `MyLocation` ikona `Landscape`, opis „Pokaż całe Tatry";
+   - przycisk planowania trasy (lewy górny róg): zamiast `Menu` ikona `Route`, opis „Planowanie trasy".
+5. **Zapamiętywanie warstw:** dodaj Jetpack DataStore (Preferences) i małą klasę, np. `data/MapLayerSettingsStore`, która zapisuje i odczytuje `MapLayerSettings`. Mapa startuje z zapisanymi ustawieniami; każda zmiana przełącznika jest zapisywana. Wersję biblioteki dodaj w `libs.versions.toml`. Nie podpinaj jeszcze ekranu Ustawień – to osobne zadanie (punkt 1).
+6. **Usuń ekran testowy Samsung Health:** `ui/SamsungHealthTestScreen.kt`, jego trasę w `navigation/Screen.kt`, wpis w `MainActivity.kt` (`secondaryRoutes` i `NavHost`) oraz sekcję „Eksperymenty" w `ui/MoreScreen.kt`. Synchronizacja na `ImportScreen` zostaje bez zmian.
+7. Testy JUnit dla zapisu i odczytu ustawień warstw, jeśli da się to przetestować bez urządzenia (czysta funkcja mapująca ustawienia ↔ klucze); bez testów interfejsu.
+
+**Poza zakresem:** podział `MapScreen.kt` na mniejsze pliki, pozycja użytkownika na mapie (punkt 13), warstwa ukończonych szlaków (punkt 9), zmiany wyglądu panelu poza opisanym układem.
+
+**Test na telefonie (Miłosz):** w prawym górnym rogu jest jeden przycisk; każdy przełącznik w panelu włącza i wyłącza swoją warstwę; po wyłączeniu np. poziomic, wyjściu z mapy i powrocie (oraz po zamknięciu i ponownym otwarciu aplikacji) poziomice nadal są wyłączone; „Dodaj własny punkt" i „Importuj trasę GPX" działają jak wcześniej; w zakładce Więcej nie ma już „Test Samsung Health".
+
+## Zakończone: synchronizacja z Samsung Health
 
 **Cel:** treningi nagrane opaską Galaxy Fit3 trafiają do TatraTracker bez pobierania plików ze Stravy. To już nie eksperyment: kod docelowy, z testami jednostkowymi logiki.
 
@@ -191,8 +219,8 @@ Reguły dla wykonawcy:
 
 ## Proponowana kolejność
 
-1. Test Samsung Health (zrobione) → synchronizacja z Samsung Health (trwa).
-2. Porządki na mapie: 45–48.
+1. Test Samsung Health i synchronizacja z Samsung Health (zrobione, 24).
+2. Porządki na mapie: 45–48 (trwa).
 3. Etap „bez martwych przycisków": 1, 2, 6–10, 14.
 4. Makiety wyglądu (34), potem 23, 27, 29, 30.
 5. Kopia, eksport, mapy offline: 3–5.
@@ -208,3 +236,4 @@ Reguły dla wykonawcy:
 - 2026-11-14 – synchronizacja z Samsung Health (kod). Nowe: pakiet `health/` (modele niezależne od SDK, `SamsungHealthClient` – jedyne użycie SDK, czysty `SamsungHealthSessionMapper`, `DuplicateActivityRule`, `SamsungHealthSyncService`), `fit/ActivitySaver.kt` (wspólny zapis aktywności + wykrywanie POI dla pliku i Samsung Health), `fit/ActivityMetrics.kt` (dwa czasy, limit 24 h, tempo), `viewmodel/SamsungHealthSyncViewModel.kt`, `ui/SamsungHealthSyncSection.kt` na `ImportScreen`, komunikat „Zaimportowano N aktywności” w `MainActivity`. Room 9: `movingDurationMillis` i migracja wg decyzji 1 (SQL sprawdzony na próbnej bazie SQLite, w tym granica 24 h), schemat `9.json`. Import FIT/TCX zapisuje oba czasy. Szczegóły aktywności: „Czas całkowity”, „W ruchu”, „Postoje”; Statystyki: karta „Czas” = całkowity, podpis „W ruchu X”. Testy JUnit: 37 nowych (mapper, duplikaty, czasy); `assembleDebug` i `testDebugUnitTest` przechodzą.
   - Ustalenia wykonawcy (do ewentualnej korekty): dystans duplikatu porównywany względem dystansu treningu z Samsung Health (|różnica| / dystans SH < 5%), start ±5 min włącznie; „pominięto” liczy treningi już zaimportowane i duplikaty plików – treningi innych typów, aplikacji i bez trasy są pomijane bez liczenia; tętno i prędkość szukane osobno (najbliższy wpis z niepustą wartością), tętno ≤ 0 = brak; czas całkowity nigdy krótszy niż czas w ruchu; „Postoje” pokazywane od 1 min (krótsze dałyby „0 min”); synchronizacja automatyczna obejmuje 90 dni, raz na proces aplikacji, jest pomijana, gdy trwa ręczna, a jej błędy trafiają tylko do logcat; „cała historia” = od 01.01.2010, limit 500 stron odczytu; dozwolone typy jako nazwy z `PredefinedExerciseType` (`"HIKING"`) w `SamsungHealthSessionMapper.ALLOWED_EXERCISE_TYPES`, żeby mapper dało się testować bez SDK.
   - Nie testowane na telefonie: migracja na prawdziwej bazie (test `MigrationTestHelper` wymagałby testu instrumentalnego – nie powstał), okno zgód, `resolve()` przy braku/starej wersji Samsung Health, komunikat po synchronizacji automatycznej, czas przetwarzania treningu z ok. 29 tys. punktów, wykrywanie POI dla nowych aktywności. Logi: tag `SamsungHealthSync` (oraz `SamsungHealthClient`).
+- 2026-11-14 – synchronizacja przetestowana na telefonie przez Miłosza: działa (migracja, zgody, import, brak duplikatów). Dopisano zadanie „porządki na mapie".
