@@ -29,10 +29,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.tatratracker.data.PlannedRouteEntity
-import com.example.tatratracker.gpx.GpxPlannedRouteImporter
+import com.example.tatratracker.gpx.GpxPlannedRouteImportResult
 import com.example.tatratracker.ui.components.PlannedRouteCard
 import com.example.tatratracker.ui.components.TatraEmptyState
 import com.example.tatratracker.ui.components.TatraFeatureDialog
@@ -43,6 +42,7 @@ import com.example.tatratracker.ui.components.TatraStatCard
 import com.example.tatratracker.ui.components.TatraSubScreenHeader
 import com.example.tatratracker.ui.theme.TatraBackground
 import com.example.tatratracker.ui.theme.TatraSpacing
+import com.example.tatratracker.viewmodel.GpxRouteImportOutcome
 import com.example.tatratracker.viewmodel.PlannedRoutesViewModel
 import kotlinx.coroutines.launch
 import java.util.Locale
@@ -57,9 +57,6 @@ fun MyRoutesScreen(
         viewModel()
 ) {
 
-    val context =
-        LocalContext.current
-
     val scope =
         rememberCoroutineScope()
 
@@ -67,16 +64,6 @@ fun MyRoutesScreen(
     viewModel
         .routes
         .collectAsState()
-
-    val gpxImporter =
-        remember(
-            context
-        ) {
-
-            GpxPlannedRouteImporter(
-                context.applicationContext
-            )
-        }
 
     var isImportingGpx by
     remember {
@@ -119,107 +106,18 @@ fun MyRoutesScreen(
             }
 
             scope.launch {
+                isImportingGpx = true
 
-                isImportingGpx =
-                    true
+                dialogContent =
+                    when (val outcome = viewModel.importGpxRoute(uri)) {
+                        is GpxRouteImportOutcome.Imported ->
+                            "Trasa GPX zaimportowana" to importedRouteSummary(outcome.details)
 
-                val parseResult =
-                    gpxImporter
-                        .importRoute(
-                            uri
-                        )
-
-                parseResult
-                    .onSuccess {
-                            imported ->
-
-                        val saveResult =
-                            viewModel.saveRoute(
-                                imported.draft
-                            )
-
-                        saveResult
-                            .onSuccess {
-
-                                val distanceKm =
-                                    imported
-                                        .draft
-                                        .distanceMeters /
-                                            1000.0
-
-                                dialogContent =
-                                    "Trasa GPX zaimportowana" to
-                                            buildString {
-
-                                                append(
-                                                    "„${imported.draft.name}” została zapisana w Moich trasach."
-                                                )
-
-                                                append(
-                                                    "\n\nDystans: "
-                                                )
-
-                                                append(
-                                                    String.format(
-                                                        Locale.getDefault(),
-                                                        "%.2f km",
-                                                        distanceKm
-                                                    )
-                                                )
-
-                                                append(
-                                                    "\nPunkty geometrii: ${imported.geometryPointCount}"
-                                                )
-
-                                                if (
-                                                    imported.waypointCount >
-                                                    0
-                                                ) {
-
-                                                    append(
-                                                        "\nPrzystanki: ${imported.waypointCount}"
-                                                    )
-                                                }
-
-                                                if (
-                                                    imported.draft
-                                                        .minElevationMeters !=
-                                                    null &&
-                                                    imported.draft
-                                                        .maxElevationMeters !=
-                                                    null
-                                                ) {
-
-                                                    append(
-                                                        "\nWysokość: ${imported.draft.minElevationMeters}–${imported.draft.maxElevationMeters} m"
-                                                    )
-                                                }
-                                            }
-                            }
-                            .onFailure {
-                                    error ->
-
-                                dialogContent =
-                                    "Nie udało się zapisać trasy" to
-                                            (
-                                                    error.message
-                                                        ?: "Wystąpił nieznany błąd zapisu w bazie."
-                                                    )
-                            }
-                    }
-                    .onFailure {
-                            error ->
-
-                        dialogContent =
-                            "Nie udało się zaimportować GPX" to
-                                    (
-                                            error.message
-                                                ?: "Plik nie zawiera poprawnej trasy GPX."
-                                            )
+                        is GpxRouteImportOutcome.Failed ->
+                            outcome.title to outcome.message
                     }
 
-                isImportingGpx =
-                    false
+                isImportingGpx = false
             }
         }
 
@@ -513,6 +411,29 @@ fun MyRoutesScreen(
                         TatraSpacing.md
                     )
             )
+        }
+    }
+}
+
+/**
+ * Szczegóły zaimportowanej trasy pokazywane na ekranie „Moje trasy”.
+ */
+private fun importedRouteSummary(imported: GpxPlannedRouteImportResult): String {
+    val draft = imported.draft
+    val distanceKm = draft.distanceMeters / 1000.0
+
+    return buildString {
+        append("„${draft.name}” została zapisana w Moich trasach.")
+        append("\n\nDystans: ")
+        append(String.format(Locale.getDefault(), "%.2f km", distanceKm))
+        append("\nPunkty geometrii: ${imported.geometryPointCount}")
+
+        if (imported.waypointCount > 0) {
+            append("\nPrzystanki: ${imported.waypointCount}")
+        }
+
+        if (draft.minElevationMeters != null && draft.maxElevationMeters != null) {
+            append("\nWysokość: ${draft.minElevationMeters}–${draft.maxElevationMeters} m")
         }
     }
 }

@@ -1,6 +1,7 @@
 package com.example.tatratracker.viewmodel
 
 import android.app.Application
+import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.room.withTransaction
@@ -9,6 +10,8 @@ import com.example.tatratracker.data.PlannedRouteDraft
 import com.example.tatratracker.data.PlannedRouteDraftPoint
 import com.example.tatratracker.data.PlannedRouteEntity
 import com.example.tatratracker.data.PlannedRoutePointEntity
+import com.example.tatratracker.gpx.GpxPlannedRouteImportResult
+import com.example.tatratracker.gpx.GpxPlannedRouteImporter
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
@@ -37,6 +40,33 @@ class PlannedRoutesViewModel(
                     ),
                 initialValue = emptyList()
             )
+
+    private val gpxImporter = GpxPlannedRouteImporter(application)
+
+    /**
+     * Import zaplanowanej trasy z pliku GPX i zapis w „Moich trasach”.
+     * Wspólny dla ekranu „Moje trasy” i mapy; komunikat o sukcesie każdy ekran buduje sam.
+     */
+    suspend fun importGpxRoute(uri: Uri): GpxRouteImportOutcome {
+        val imported = gpxImporter.importRoute(uri).getOrElse { error ->
+            return GpxRouteImportOutcome.Failed(
+                title = "Nie udało się zaimportować GPX",
+                message = error.message ?: "Plik nie zawiera poprawnej trasy GPX."
+            )
+        }
+
+        return saveRoute(imported.draft).fold(
+            onSuccess = { routeId ->
+                GpxRouteImportOutcome.Imported(routeId = routeId, details = imported)
+            },
+            onFailure = { error ->
+                GpxRouteImportOutcome.Failed(
+                    title = "Nie udało się zapisać trasy",
+                    message = error.message ?: "Wystąpił nieznany błąd zapisu w bazie."
+                )
+            }
+        )
+    }
 
     suspend fun saveRoute(
         draft: PlannedRouteDraft
@@ -226,6 +256,19 @@ data class PlannedRouteEditData(
     val route: PlannedRouteEntity,
     val points: List<PlannedRoutePointEntity>
 )
+
+sealed interface GpxRouteImportOutcome {
+
+    data class Imported(
+        val routeId: Long,
+        val details: GpxPlannedRouteImportResult
+    ) : GpxRouteImportOutcome
+
+    data class Failed(
+        val title: String,
+        val message: String
+    ) : GpxRouteImportOutcome
+}
 
 private fun PlannedRouteDraftPoint.toEntity(
     routeId: Long

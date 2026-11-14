@@ -60,8 +60,6 @@ sealed class Screen(
         "about_screen"
     )
 
-    object SamsungHealthTest : Screen("samsung_health_test_screen")
-
     object ActivityDetails : Screen(
         "activity_details/{activityId}"
     ) {

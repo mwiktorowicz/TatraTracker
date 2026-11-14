@@ -25,7 +25,7 @@ Reguły dla wykonawcy:
 
 **Cel:** jeden przycisk i jeden panel warstw zamiast trzech dublujących się, ikony zgodne z działaniem, zapamiętywanie ustawień warstw. Przy okazji usunięcie ekranu testowego Samsung Health. Punkty 45–48 z listy.
 
-**Stan zastany:** w `ui/MapScreen.kt` w prawym górnym rogu są trzy przyciski: „Punkty" (`MapPoiToolsPanel`), „Warstwy" (`MapLayersPanel`), „Szlaki" (`MapTrailToolsPanel`). „Warstwy" zawiera przełączniki obu pozostałych. Ustawienia (`MapLayerSettings`) są w `remember` i giną po wyjściu z mapy.
+**Stan zastany:** w `ui/MapScreen.kt` w prawym górnym rogu są trzy przyciski: „Punkty" (`MapPoiToolsPanel`), „Warstwy" (`MapLayersPanel`), „Szlaki" (`MapTrailToolsPanel`). „Warstwy" zawiera przełączniki obu pozostałych. Ustawienia (`MapLayerSettings`) są w `remember` i giną po wyjściu z mapy. Akcja „Importuj GPX" w panelu „Szlaki" niczego nie importuje – pokazuje tylko okienko „Import GPX podepniemy w kolejnym etapie."; import zaplanowanej trasy z GPX działa wyłącznie w „Moich trasach" (`MyRoutesScreen`, `GpxPlannedRouteImporter`). (Ustalone przez wykonawcę 2026-11-14.)
 
 **Do zrobienia:**
 
@@ -34,7 +34,7 @@ Reguły dla wykonawcy:
    - *Mapa:* Szlaki, Poziomice, Moje ślady GPS;
    - *Punkty:* Szczyty, Schroniska, Jaskinie, Jeziora i stawy;
    - *Ukończone szlaki:* wiersz z plakietką „Wkrótce", nieaktywny (do punktu 9);
-   - *Akcje:* „Dodaj własny punkt" (otwiera istniejący `AddOwnPlaceDialog`) oraz „Importuj trasę GPX" z podpisem „Dodaj zaplanowaną trasę z pliku" (istniejące działanie importu, poprawiony opis).
+   - *Akcje:* „Dodaj własny punkt" (otwiera istniejący `AddOwnPlaceDialog`) oraz „Importuj trasę GPX" z podpisem „Dodaj zaplanowaną trasę z pliku". Decyzja Miłosza (2026-11-14): akcja importuje naprawdę, tym samym kodem co „Moje trasy" – logika wydzielona do wspólnego miejsca, bez kopiowania; po udanym imporcie krótki komunikat z nazwą zapisanej trasy, przy błędzie czytelny komunikat; bez automatycznego pokazywania trasy na mapie (osobne zadanie).
    - Każdy przełącznik występuje dokładnie raz. Obecna etykieta „Moje trasy" przy przełączniku `gpsTracks` zmienia się na „Moje ślady GPS".
    - Panel przewijany, jeśli nie mieści się na ekranie.
 3. Usuń `MapPoiToolsPanel` i `MapTrailToolsPanel` (pliki `MapPoiTools.kt`, `MapTrailTools.kt`), zachowując `AddOwnPlaceDialog` (przenieś do osobnego pliku).
@@ -47,7 +47,7 @@ Reguły dla wykonawcy:
 
 **Poza zakresem:** podział `MapScreen.kt` na mniejsze pliki, pozycja użytkownika na mapie (punkt 13), warstwa ukończonych szlaków (punkt 9), zmiany wyglądu panelu poza opisanym układem.
 
-**Test na telefonie (Miłosz):** w prawym górnym rogu jest jeden przycisk; każdy przełącznik w panelu włącza i wyłącza swoją warstwę; po wyłączeniu np. poziomic, wyjściu z mapy i powrocie (oraz po zamknięciu i ponownym otwarciu aplikacji) poziomice nadal są wyłączone; „Dodaj własny punkt" i „Importuj trasę GPX" działają jak wcześniej; w zakładce Więcej nie ma już „Test Samsung Health".
+**Test na telefonie (Miłosz):** w prawym górnym rogu jest jeden przycisk; każdy przełącznik w panelu włącza i wyłącza swoją warstwę; po wyłączeniu np. poziomic, wyjściu z mapy i powrocie (oraz po zamknięciu i ponownym otwarciu aplikacji) poziomice nadal są wyłączone; „Dodaj własny punkt" działa jak wcześniej; „Importuj trasę GPX" na mapie zapisuje trasę z pliku (komunikat z nazwą, trasa widoczna w „Moich trasach"), a zły plik daje czytelny błąd; import w „Moich trasach" działa jak wcześniej; w zakładce Więcej nie ma już „Test Samsung Health".
 
 ## Zakończone: synchronizacja z Samsung Health
 
@@ -215,7 +215,7 @@ Reguły dla wykonawcy:
 51. Trzy implementacje wykresu wysokości (`ElevationProfileChart`, `ActivityElevationSection`, `PlannedRouteElevationProfile`) i cztery osobne `MapView` – ujednolicić.
 52. `formatDuration` w 4 plikach, `formatDistance` w 3 – różne formaty tego samego dystansu.
 53. `ImportScreen` bez ViewModelu – obrót ekranu gubi stan importu.
-54. „Importuj GPX" na mapie importuje zaplanowaną trasę, a opis mówi „ślad lub trasę".
+54. „Importuj GPX" na mapie był zaślepką (okienko „podepniemy w kolejnym etapie"), a opis mówił „ślad lub trasę"; prawdziwy import zaplanowanej trasy był tylko w „Moich trasach". Zrobione w zadaniu „porządki na mapie": „Importuj trasę GPX" na mapie importuje zaplanowaną trasę wspólnym kodem z „Moimi trasami".
 
 ## Proponowana kolejność
 
@@ -237,3 +237,6 @@ Reguły dla wykonawcy:
   - Ustalenia wykonawcy (do ewentualnej korekty): dystans duplikatu porównywany względem dystansu treningu z Samsung Health (|różnica| / dystans SH < 5%), start ±5 min włącznie; „pominięto” liczy treningi już zaimportowane i duplikaty plików – treningi innych typów, aplikacji i bez trasy są pomijane bez liczenia; tętno i prędkość szukane osobno (najbliższy wpis z niepustą wartością), tętno ≤ 0 = brak; czas całkowity nigdy krótszy niż czas w ruchu; „Postoje” pokazywane od 1 min (krótsze dałyby „0 min”); synchronizacja automatyczna obejmuje 90 dni, raz na proces aplikacji, jest pomijana, gdy trwa ręczna, a jej błędy trafiają tylko do logcat; „cała historia” = od 01.01.2010, limit 500 stron odczytu; dozwolone typy jako nazwy z `PredefinedExerciseType` (`"HIKING"`) w `SamsungHealthSessionMapper.ALLOWED_EXERCISE_TYPES`, żeby mapper dało się testować bez SDK.
   - Nie testowane na telefonie: migracja na prawdziwej bazie (test `MigrationTestHelper` wymagałby testu instrumentalnego – nie powstał), okno zgód, `resolve()` przy braku/starej wersji Samsung Health, komunikat po synchronizacji automatycznej, czas przetwarzania treningu z ok. 29 tys. punktów, wykrywanie POI dla nowych aktywności. Logi: tag `SamsungHealthSync` (oraz `SamsungHealthClient`).
 - 2026-11-14 – synchronizacja przetestowana na telefonie przez Miłosza: działa (migracja, zgody, import, brak duplikatów). Dopisano zadanie „porządki na mapie".
+- 2026-11-14 – porządki na mapie (kod). Mapa: jeden przycisk „Warstwy" i jeden panel `MapLayersPanel` (sekcje Mapa / Punkty / „Ukończone szlaki" z plakietką „Wkrótce", nieaktywne / Akcje; przewijany), usunięte `MapPoiTools.kt` i `MapTrailTools.kt`, `AddOwnPlaceDialog` w osobnym pliku, ikony `Route` („Planowanie trasy") i `Landscape` („Pokaż całe Tatry"). Zapamiętywanie warstw: DataStore Preferences 1.2.1, `data/MapLayerSettingsStore.kt` (plik `map_layer_settings`), stan w `MapViewModel` (`layerSettings`, `updateLayerSettings`). Import GPX na mapie (decyzja A): `PlannedRoutesViewModel.importGpxRoute()` zwraca `GpxRouteImportOutcome` i jest używany przez mapę oraz „Moje trasy" (treść komunikatów w „Moich trasach" bez zmian); na mapie komunikat „„nazwa" została zapisana w Moich trasach." albo błąd, w trakcie importu wskaźnik ładowania. Usunięty ekran testowy Samsung Health (`SamsungHealthTestScreen.kt`, trasa w `Screen.kt`, wpisy w `MainActivity.kt`, sekcja „Eksperymenty" w `MoreScreen.kt`). Testy JUnit: 6 nowych (`MapLayerSettingsStoreTest`); `assembleDebug` i `testDebugUnitTest` przechodzą (44 testy).
+  - Ustalenia wykonawcy (do ewentualnej korekty): DataStore 1.2.1 zamiast najnowszej 1.3.0 – 1.3.0 wymaga `kotlin-stdlib` 2.2.20, nowszej niż Kotlin wbudowany w AGP (2.2.10); 1.2.1 nie podbija żadnej zależności (coroutines 1.9.0 już były w projekcie). Ustawienia wczytywane raz przy otwarciu mapy; jeśli użytkownik przełączy warstwę przed końcem odczytu, wygrywa jego wybór. Zanim przyjdą zapisane ustawienia, przez ułamek sekundy mogą obowiązywać domyślne (w praktyce odczyt DataStore kończy się przed wczytaniem stylu mapy z sieci). `MapLayerSettingsStore` w pakiecie `data` zależy od `ui.map.MapLayerSettings` – przeniesienie klasy poza zakresem. Kliknięcie akcji w panelu zamyka panel. „Dodaj własny punkt" nadal kończy się komunikatem „gotowy do podłączenia" (punkt 8).
+  - Nie testowane na telefonie: wszystko z sekcji „Test na telefonie" zadania, w szczególności pamięć warstw po restarcie aplikacji i import GPX z mapy (poprawny i błędny plik).

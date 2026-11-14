@@ -1,15 +1,15 @@
 package com.example.tatratracker.ui
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Landscape
 import androidx.compose.material.icons.outlined.Layers
-import androidx.compose.material.icons.outlined.LocationOn
-import androidx.compose.material.icons.outlined.Menu
-import androidx.compose.material.icons.outlined.MyLocation
-import androidx.compose.material.icons.outlined.Terrain
+import androidx.compose.material.icons.outlined.Route
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
@@ -34,14 +34,11 @@ import com.example.tatratracker.data.PlannedRoutePointEntity
 import com.example.tatratracker.data.PlannedRoutePointType
 import com.example.tatratracker.ui.components.TatraFeatureDialog
 import com.example.tatratracker.ui.map.AddOwnPlaceDialog
-import com.example.tatratracker.ui.map.MapLayerSettings
 import com.example.tatratracker.ui.map.MapLayersPanel
-import com.example.tatratracker.ui.map.MapPoiToolsPanel
 import com.example.tatratracker.ui.map.MapRoundButton
 import com.example.tatratracker.ui.map.MapRouteQuickActions
 import com.example.tatratracker.ui.map.MapSearchRepository
 import com.example.tatratracker.ui.map.MapSearchResult
-import com.example.tatratracker.ui.map.MapTrailToolsPanel
 import com.example.tatratracker.ui.map.MapViewLifecycle
 import com.example.tatratracker.ui.map.PlannedRoute
 import com.example.tatratracker.ui.map.PlannedRouteActionsDialog
@@ -76,6 +73,7 @@ import com.example.tatratracker.ui.map.updateRouteSelection
 import com.example.tatratracker.ui.map.updateUserTracks
 import com.example.tatratracker.ui.theme.TatraDark
 import com.example.tatratracker.ui.theme.TatraGreen
+import com.example.tatratracker.viewmodel.GpxRouteImportOutcome
 import com.example.tatratracker.viewmodel.MapViewModel
 import com.example.tatratracker.viewmodel.PlannedRouteEditData
 import com.example.tatratracker.viewmodel.PlannedRoutesViewModel
@@ -166,26 +164,10 @@ fun MapScreen(
         )
     }
 
-    var layerSettings by
-    remember {
-        mutableStateOf(
-            MapLayerSettings()
-        )
-    }
+    // Zapamiętane w DataStore – patrz MapViewModel.updateLayerSettings.
+    val layerSettings by mapViewModel.layerSettings.collectAsState()
 
-    var showPoiPanel by
-    remember {
-        mutableStateOf(
-            false
-        )
-    }
-
-    var showTrailToolsPanel by
-    remember {
-        mutableStateOf(
-            false
-        )
-    }
+    var isImportingGpx by remember { mutableStateOf(false) }
 
     var showSaveRouteDialog by
     remember {
@@ -216,6 +198,30 @@ fun MapScreen(
             null
         )
     }
+
+    // Import zaplanowanej trasy z GPX – ta sama logika co w „Moich trasach” (PlannedRoutesViewModel).
+    val gpxPicker =
+        rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
+            if (uri == null) {
+                return@rememberLauncherForActivityResult
+            }
+
+            coroutineScope.launch {
+                isImportingGpx = true
+
+                featureDialog =
+                    when (val outcome = plannedRoutesViewModel.importGpxRoute(uri)) {
+                        is GpxRouteImportOutcome.Imported ->
+                            "Trasa zaimportowana" to
+                                "„${outcome.details.draft.name.trim()}” została zapisana w Moich trasach."
+
+                        is GpxRouteImportOutcome.Failed ->
+                            outcome.title to outcome.message
+                    }
+
+                isImportingGpx = false
+            }
+        }
 
     var showRoutePlanner by
     remember {
@@ -1115,12 +1121,6 @@ fun MapScreen(
                 showLayersPanel =
                     false
 
-                showPoiPanel =
-                    false
-
-                showTrailToolsPanel =
-                    false
-
                 if (
                     opening
                 ) {
@@ -1149,7 +1149,7 @@ fun MapScreen(
 
             Icon(
                 imageVector =
-                    Icons.Outlined.Menu,
+                    Icons.Outlined.Route,
                 contentDescription =
                     "Planowanie trasy",
                 tint =
@@ -1191,139 +1191,25 @@ fun MapScreen(
             )
         }
 
-        Column(
-            modifier =
-                Modifier
-                    .align(
-                        Alignment.TopEnd
-                    )
-                    .padding(
-                        end = 14.dp,
-                        top = 14.dp
-                    )
+        MapRoundButton(
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(end = 14.dp, top = 14.dp),
+            onClick = {
+                showLayersPanel = !showLayersPanel
+                showRoutePlanner = false
+                routePlanningState = routePlanningState.copy(
+                    activeSearchTarget = null,
+                    selectingOnMap = null
+                )
+                selectedElevationSample = null
+            }
         ) {
-
-            MapRoundButton(
-                onClick = {
-
-                    showPoiPanel =
-                        !showPoiPanel
-
-                    showLayersPanel =
-                        false
-
-                    showTrailToolsPanel =
-                        false
-
-                    showRoutePlanner =
-                        false
-
-                    routePlanningState =
-                        routePlanningState.copy(
-                            activeSearchTarget =
-                                null,
-                            selectingOnMap =
-                                null
-                        )
-
-                    selectedElevationSample =
-                        null
-                }
-            ) {
-
-                Icon(
-                    imageVector =
-                        Icons.Outlined.LocationOn,
-                    contentDescription =
-                        "Punkty",
-                    tint =
-                        TatraDark
-                )
-            }
-
-            MapRoundButton(
-                modifier =
-                    Modifier.padding(
-                        top = 8.dp
-                    ),
-                onClick = {
-
-                    showLayersPanel =
-                        !showLayersPanel
-
-                    showPoiPanel =
-                        false
-
-                    showTrailToolsPanel =
-                        false
-
-                    showRoutePlanner =
-                        false
-
-                    routePlanningState =
-                        routePlanningState.copy(
-                            activeSearchTarget =
-                                null,
-                            selectingOnMap =
-                                null
-                        )
-
-                    selectedElevationSample =
-                        null
-                }
-            ) {
-
-                Icon(
-                    imageVector =
-                        Icons.Outlined.Layers,
-                    contentDescription =
-                        "Warstwy",
-                    tint =
-                        TatraDark
-                )
-            }
-
-            MapRoundButton(
-                modifier =
-                    Modifier.padding(
-                        top = 8.dp
-                    ),
-                onClick = {
-
-                    showTrailToolsPanel =
-                        !showTrailToolsPanel
-
-                    showLayersPanel =
-                        false
-
-                    showPoiPanel =
-                        false
-
-                    showRoutePlanner =
-                        false
-
-                    routePlanningState =
-                        routePlanningState.copy(
-                            activeSearchTarget =
-                                null,
-                            selectingOnMap =
-                                null
-                        )
-
-                    selectedElevationSample =
-                        null
-                }
-            ) {
-
-                Icon(
-                    imageVector =
-                        Icons.Outlined.Terrain,
-                    contentDescription =
-                        "Szlaki",
-                    tint =
-                        TatraDark
-                )
-            }
+            Icon(
+                imageVector = Icons.Outlined.Layers,
+                contentDescription = "Warstwy",
+                tint = TatraDark
+            )
         }
 
         if (
@@ -1632,105 +1518,27 @@ fun MapScreen(
         }
 
         if (
-            showPoiPanel
-        ) {
-
-            MapPoiToolsPanel(
-                modifier =
-                    Modifier
-                        .align(
-                            Alignment.TopEnd
-                        )
-                        .padding(
-                            top = 66.dp,
-                            end = 70.dp
-                        ),
-                settings =
-                    layerSettings,
-                onSettingsChange = {
-
-                    layerSettings =
-                        it
-                },
-                onAddOwnPlace = {
-
-                    showAddOwnPlaceDialog =
-                        true
-                },
-                onClose = {
-
-                    showPoiPanel =
-                        false
-                }
-            )
-        }
-
-        if (
-            showTrailToolsPanel
-        ) {
-
-            MapTrailToolsPanel(
-                modifier =
-                    Modifier
-                        .align(
-                            Alignment.TopEnd
-                        )
-                        .padding(
-                            top = 66.dp,
-                            end = 70.dp
-                        ),
-                settings =
-                    layerSettings,
-                onSettingsChange = {
-
-                    layerSettings =
-                        it
-                },
-                onCompletedTrailsClick = {
-
-                    featureDialog =
-                        "Ukończone szlaki" to
-                                "Podświetlanie zaliczonych odcinków podepniemy po uruchomieniu TrailMatcher."
-                },
-                onImportGpxClick = {
-
-                    featureDialog =
-                        "Import GPX" to
-                                "Import GPX podepniemy w kolejnym etapie."
-                },
-                onClose = {
-
-                    showTrailToolsPanel =
-                        false
-                }
-            )
-        }
-
-        if (
             showLayersPanel
         ) {
 
             MapLayersPanel(
-                modifier =
-                    Modifier
-                        .align(
-                            Alignment.TopEnd
-                        )
-                        .padding(
-                            top = 66.dp,
-                            end = 70.dp
-                        ),
-                settings =
-                    layerSettings,
-                onSettingsChange = {
-
-                    layerSettings =
-                        it
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(top = 66.dp, end = 70.dp, bottom = 16.dp),
+                settings = layerSettings,
+                onSettingsChange = mapViewModel::updateLayerSettings,
+                onAddOwnPlace = {
+                    showLayersPanel = false
+                    showAddOwnPlaceDialog = true
+                },
+                onImportGpx = {
+                    showLayersPanel = false
+                    if (!isImportingGpx) {
+                        gpxPicker.launch(arrayOf("*/*"))
+                    }
                 },
                 onClose = {
-
-                    showLayersPanel =
-                        false
+                    showLayersPanel = false
                 }
             )
         }
@@ -1764,9 +1572,9 @@ fun MapScreen(
 
                 Icon(
                     imageVector =
-                        Icons.Outlined.MyLocation,
+                        Icons.Outlined.Landscape,
                     contentDescription =
-                        "Tatry",
+                        "Pokaż całe Tatry",
                     tint =
                         TatraDark
                 )
@@ -1775,7 +1583,8 @@ fun MapScreen(
 
         if (
             mapLoading ||
-            editLoading
+            editLoading ||
+            isImportingGpx
         ) {
 
             CircularProgressIndicator(
