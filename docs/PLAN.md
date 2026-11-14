@@ -21,7 +21,28 @@ Reguły dla wykonawcy:
 6. Nowy kod pisz w normalnym formatowaniu Kotlina (nie po jednym tokenie na linię, jak w istniejących plikach). Istniejących plików nie przeformatowuj bez osobnego zadania.
 7. Klucz `MAPTILER_API_KEY` jest w `local.properties` – nie wypisuj go i nie przenoś do repozytorium.
 
-## Aktualne zadanie: widok satelitarny
+## Aktualne zadanie: odtwarzanie wędrówki
+
+**Cel:** wędrówkę da się obejrzeć jak film: znacznik jedzie po trasie na mapie, razem z nim przesuwa się punkt na profilu wysokości i zmieniają się odczyty. Punkt 57. Pierwsze zadanie „pakietu interaktywnego" (patrz „Proponowana kolejność").
+
+**Stan zastany:** `ui/ActivityDetailsScreen.kt` pokazuje małą mapę (`ui/map/ActivityRouteMap.kt`, 280 dp, wewnątrz przewijanej kolumny) i profil (`ActivityElevationSection`). Wybór punktu na profilu z podświetleniem istnieje tylko dla planowanych tras (`ui/map/ElevationProfileChart.kt` + `MapElevationMarker.kt`). Trening z zegarka ma ok. 29 tys. punktów (1 punkt/s); tętno i prędkość są w punktach, ale nie w każdym.
+
+**Do zrobienia:**
+
+1. **Wejście:** przycisk „Odtwórz" na karcie mapy w szczegółach aktywności. Widoczny tylko, gdy aktywność ma co najmniej 2 punkty GPS. Otwiera nowy, pełnoekranowy ekran `ActivityReplayScreen` (osobna trasa w `navigation/Screen.kt`, bez dolnego paska).
+2. **Układ ekranu:** mapa wypełnia górną część; na dole panel z: paskiem odczytów, profilem wysokości i sterowaniem. Przycisk wstecz w lewym górnym rogu mapy.
+3. **Mapa:** cały ślad cienką, przygaszoną linią; przebyta część grubszą, wyraźną; ruchomy znacznik pozycji; start zielony, meta czerwona. Podkład taki, jaki użytkownik ma zapisany na mapie głównej (Teren/Satelita), z tymi samymi korektami czytelności. Logo MapTiler i informacje o autorach danych widoczne. Przycisk „Śledź" (domyślnie włączony): kamera podąża za znacznikiem; ręczne przesunięcie mapy go wyłącza, ponowne dotknięcie włącza. Na starcie kamera pokazuje cały ślad.
+4. **Odtwarzanie:** postęp liczony **po dystansie**, ze stałą prędkością wzdłuż trasy, żeby znacznik nie stał w miejscu na postojach. Trzy tempa: całość w ok. 2 min / 1 min (domyślnie) / 30 s. Odtwórz/pauza; po dojściu do końca przycisk zmienia się w „Od początku". Ekran nie gaśnie w trakcie odtwarzania.
+5. **Profil wysokości:** pionowy kursor w miejscu znacznika. Dotknięcie lub przeciąganie palcem po profilu przenosi znacznik w to miejsce (i pauzuje odtwarzanie). Nie twórz czwartej implementacji wykresu: wykorzystaj i w razie potrzeby rozszerz `ElevationProfileChart`; jeśli się nie da bez dużej przeróbki, zatrzymaj się i opisz dlaczego (zasada 5).
+6. **Odczyty w aktualnym punkcie:** godzina (czas zegarowy z punktu), dystans od startu, wysokość, tętno, prędkość. Wartości formatowane przez `TatraFormat`; brak wartości = „Brak danych". Tętno i prędkość z najbliższego punktu, który je ma, nie dalej niż 90 s.
+7. **Płynność:** do rysowania ślad uproszczony do rozsądnej liczby punktów (rząd 1500–3000), odczyty z pełnych danych przez wyszukiwanie binarne po dystansie narastającym. Odtwarzanie ma być płynne na Galaxy A52s; aktualizacje mapy nie częściej niż potrzeba.
+8. **Kod:** czysta logika (dystans narastający, pozycja i odczyty dla zadanego postępu, uproszczenie śladu) w osobnym pliku z testami JUnit; stan odtwarzania w ViewModelu (przetrwa obrót ekranu, wraca jako pauza w tym samym miejscu).
+
+**Poza zakresem:** teren 3D i przelot kamery (punkt 25), eksport filmu lub obrazka, zmiany w małych mapach szczegółów (punkt 63), ujednolicenie pozostałych wykresów (51).
+
+**Test na telefonie (Miłosz):** szczegóły wędrówki z 06.11 → „Odtwórz": znacznik rusza ze startu i jedzie do mety, kursor na profilu idzie razem z nim, odczyty się zmieniają; pauza i wznowienie; trzy tempa; przeciągnięcie palcem po profilu przenosi znacznik na mapie; „Śledź" trzyma znacznik w kadrze, a ręczne przesunięcie mapy go wyłącza; obrót telefonu nie resetuje pozycji; odtwarzanie jest płynne; stara aktywność z pliku bez tętna pokazuje „Brak danych" zamiast błędu.
+
+## Zakończone: widok satelitarny
 
 **Cel:** drugi podkład mapy głównej – zdjęcia satelitarne z naszymi warstwami (szlaki, punkty, ślady, trasy) – przełączany w panelu „Warstwy" i zapamiętywany. Punkt 56.
 
@@ -310,7 +331,10 @@ Opis zadania:
 16. Nawigacja po zaplanowanej trasie: pozostały dystans i podejście, ostrzeżenie o zejściu ze szlaku.
 17. Szacowany czas przejścia z uwzględnieniem przewyższeń; docelowo czasy szlakowe z OSM.
 18. Pogoda i warunki dla trasy lub szczytu, wschód i zachód słońca (Open-Meteo).
-19. Odznaki i cele: Korona Tatr, zdobyte szczyty i schroniska, cele roczne.
+19. (rozbity na 19a–19c)
+   - 19a. Kolekcja szczytów i schronisk: ekran jak książeczka odznak – zdobyte w kolorze z datą pierwszego wejścia, niezdobyte szare; gotowe zestawy (Korona Tatr, wszystkie schroniska). Wizyty POI są już zapisywane.
+   - 19b. Odznaki i rekordy z krótką animacją przy nowym osiągnięciu (pierwszy dwutysięcznik, 100 km w sezonie, cały szlak danego koloru).
+   - 19c. Cele na sezon ustawiane przez użytkownika (kilometry, metry podejść), z postępem na ekranie głównym.
 20. Zdjęcia i notatki przy aktywności.
 21. Statystyki: rok do roku, mapa cieplna śladów, strefy tętna, miesiące.
 22. Szczegóły szlaku po kliknięciu na mapie (kolor, nazwa, długość, procent przejścia).
@@ -360,15 +384,31 @@ Opis zadania:
 
 56. Widok satelitarny jako drugi styl mapy (zdjęcia + nasze warstwy szlaków, punktów i śladów), z przełącznikiem stylu na mapie. Najpierw sprawdzić, czy klucz MapTiler Miłosza daje dostęp do kafli satelitarnych i jakie są limity.
 
+57. Odtwarzanie wędrówki: znacznik jadący po trasie, zsynchronizowany z profilem wysokości i odczytami; przeciąganie po profilu.
+58. Podsumowanie po synchronizacji: przesuwane plansze (dystans, najwyższy punkt, nowe szczyty, wzrost procentu przejścia Tatr), ostatnia do zapisania jako obrazek.
+59. Dotknięcie szczytu lub schroniska na mapie: wysokość, wizyty użytkownika, „Prowadź tutaj" (start planowania trasy do punktu). Razem z punktem 22.
+60. Propozycja następnej wędrówki: trasa po nieprzebytych jeszcze szlakach, otwierana w planowaniu.
+61. Statystyki do klikania: dotknięcie słupka pokazuje wędrówki z okresu, kalendarz roku, porównanie dwóch wędrówek (rozszerza punkt 21).
+62. Ruch w aplikacji: ślad rysujący się przy otwarciu wędrówki, liczby nabijające się do wartości, płynne przejścia między ekranami.
+63. Małe mapy (szczegóły aktywności, trasy, zapisanego miejsca): logo MapTiler i informacje o autorach danych, wymagane przez plan Free.
+
 ## Proponowana kolejność
 
-1. Test Samsung Health i synchronizacja z Samsung Health (zrobione, 24).
-2. Porządki na mapie: 45–48 (zrobione).
-3. Etap „bez martwych przycisków": 6, 7, 8, 9, 10 + warstwa „Moje punkty" (zrobione); 1 + 52 (zrobione); 2 zamknięty decyzją (bez jednostek imperialnych); 56 – widok satelitarny (trwa); potem 14.
-4. Makiety wyglądu (34), potem 23, 27, 29, 30.
-5. Kopia, eksport, mapy offline: 3–5.
-6. Nagrywanie na żywo: 12, 13, 16.
-7. Równolegle fundamenty: 35–40.
+Zrobione: test i synchronizacja z Samsung Health (24), porządki na mapie (45–48), 6, 7, 8, 9, 10, warstwa „Moje punkty", ustawienia (1) i wspólny zapis liczb (52), widok satelitarny (56). Punkt 2 zamknięty decyzją (bez jednostek imperialnych).
+
+**Pakiet interaktywny** (decyzja Miłosza 2026-11-14: aplikacja ma być ciekawsza i reagować, nie tylko ładniej wyglądać; robimy po kolei):
+
+1. Odtwarzanie wędrówki – 57 (trwa).
+2. Mapa odpowiada na dotyk – 22 + 59.
+3. Kolekcja szczytów i schronisk – 19a.
+4. Podsumowanie po synchronizacji i odznaki – 58 + 19b.
+5. Nowy ekran główny: ostatnia wędrówka, postęp, cele na sezon, warunki na dziś – 23 + 19c + 18; razem z wybranym kierunkiem wyglądu, trybem ciemnym, ikoną i lżejszym tłem – 34, 27, 29, 30, 63. Makiety trzech kierunków: https://claude.ai/artifact/7hA1c3LnRDZDC4vqfevS5N (wybór kierunku jeszcze nie zapadł). Przy tym decyzja o przycisku „Rozpocznij" (11).
+6. Statystyki do klikania – 61 (+ 21).
+7. Propozycja następnej wędrówki – 60.
+8. Przelot 3D nad trasą – 25.
+9. Ruch w aplikacji – 62 (część wejdzie wcześniej, przy ekranach, których dotyczy).
+
+**Potem:** bezpieczeństwo danych – 3, 4, 5; nagrywanie na żywo – 12, 13, 16; import aktywności z GPX – 14, 15; fundamenty – 35–44, 55, równolegle w miarę potrzeb.
 
 ## Dziennik
 
@@ -407,3 +447,4 @@ Opis zadania:
 - 2026-11-14 – widok satelitarny (kod). Decyzje Miłosza po kroku 0: styl `hybrid-v4`; logo MapTiler i autorzy danych widoczne na obu podkładach – logo MapTiler zamiast logo MapLibre, przycisk „i" zostaje, stały napis w prawym dolnym rogu. (1) Podkład: `ui/map/MapBasemap.kt` – `MapBasemap` (`TERRAIN`, `SATELLITE`) i `basemapStyleUrl`; `MapConfig.satelliteStyleUrl` (`maps/hybrid-v4/style.json`). `MapLayerSettings.basemap` (domyślnie `TERRAIN`), klucz `basemap` (nazwa enuma) w `map_layer_settings`; brak klucza, nieznana nazwa albo wartość złego typu = „Teren". W panelu „Warstwy" na górze sekcja „Podkład" z dwoma kafelkami obok siebie: „Teren" (ikona `Terrain`) i „Satelita" (`SatelliteAlt`), wybrany z zieloną ramką. (2) Przełączanie: wczytanie stylu przeniesione z `getMapAsync` do lokalnej `loadBasemap()` w `MapScreen` – jedyna ścieżka „styl wczytany → dołóż warstwy" (te same wywołania co dotąd), wołana przez efekt zależny od wybranego podkładu. Przed `setStyle` `loadedStyle = null`, bo stary `Style` po `setStyle` rzuca wyjątek przy każdym użyciu (sprawdzone w bajtkodzie MapLibre 13.4.0: `clear()` → `validateState`); efekty czekają na nowy styl i odtwarzają ślady GPS, przebyte szlaki, moje punkty, punkty i linię trasy, znacznik profilu oraz widoczność warstw. Stan planowania trasy żyje w `MapScreen`, nie w stylu. Pierwszy styl wczytuje się dopiero po odczycie zapisanych ustawień (`MapViewModel.layerSettingsLoaded`), żeby przy zapisanym „Satelita" nie pobierać najpierw „Teren". Kamera: `setStyle` jej nie ustawia; gdyby MapLibre przywrócił kamerę startową stylu (oba style: [0, 0], zoom 1), `restoreCameraIfReset` wraca do widoku sprzed zmiany. (3) Czytelność na zdjęciach – `applySatelliteReadability`, wołane tylko po wczytaniu „Satelita" (przy każdej zmianie stylu warstwy powstają od nowa z wyglądem „Teren", więc „Teren" bez zmian): poziomice jasnobeżowe, krycie 0,4 / 0,6 (na „Teren" brązowe 0,24 / 0,42); biała obwódka szlaku 3,8 px, pełne krycie (3,3 px, 0,92); ślad GPS jaśniejszy niebieski; poświata przebytych szlaków krycie 0,7 (0,45); obwódka etykiet szczytów, schronisk, jaskiń i stawów 2,4 px (1,7–2,2). Planowana trasa (biała obwódka 7,5 px) i moje punkty (biały krążek) bez zmian. (4) Wczytywanie: dotychczasowy wskaźnik na środku mapy. Błąd stylu satelitarnego (`onDidFailLoadingMap`, zanim styl się wczyta): Toast „Nie udało się wczytać widoku satelitarnego. Mapa wróciła do podkładu „Teren"." i `MapViewModel.fallBackToTerrainBasemap()` – zapis „Teren" w ustawieniach, efekt wczytuje „Teren". (5) Atrybucja: `ui/map/MapAttribution.kt` – logo MapTiler (`res/drawable/ic_maptiler_logo.xml`, przepisane skryptem 1:1 z `api.maptiler.com/resources/logo.svg`: 11 ścieżek, biały napis z cieniem, 67×20 dp) w miejscu logo MapLibre (wyłączone przez `uiSettings`); przycisk „i" MapLibre przesunięty tuż za logo (pełna lista źródeł z TileJSON). W prawym dolnym rogu, pod „Pokaż całe Tatry", stały napis „© MapTiler © OpenStreetMap contributors" (10 sp, półprzezroczyste białe tło). Testy JUnit: 6 nowych i uzupełnione istniejące w `MapLayerSettingsStoreTest`; `assembleDebug` i `testDebugUnitTest` przechodzą (82 testy).
   - Ustalenia wykonawcy (do ewentualnej korekty): komunikat o błędzie jako Toast (krótki, nie trzeba go zamykać), nie okno dialogowe. Powrót do „Teren" tylko, gdy błąd przyjdzie, zanim styl się wczyta – brakujące pojedyncze kafle zdjęć (np. słaby zasięg) nie przełączają podkładu. Bez internetu po powrocie z „Satelita" także „Teren" może się nie wczytać (jak dziś przy starcie bez sieci). Dotknięcie już wybranego podkładu niczego nie przeładowuje. Logo, „i" i napis leżą pod panelem planowania trasy – przy otwartym panelu są zasłonięte, tak jak dotąd logo MapLibre i „i". Małe mapy (szczegóły aktywności, trasy, zapisanego miejsca) nadal mają logo MapLibre, bez logo MapTiler i stałego napisu – poza zakresem, do decyzji. Kolory i grubości korekt czytelności dobrane bez podglądu na telefonie.
   - Nie testowane na telefonie: wszystko z sekcji „Test na telefonie" zadania, w szczególności czytelność szlaków, poziomic, śladów i etykiet na zdjęciach; kamera i wyznaczona trasa po przełączeniu; pamięć wyboru po restarcie; wygląd logo, „i" i napisu (czy nie nachodzą na siebie na wąskim ekranie); powrót do „Teren" po błędzie – najprościej przy pierwszym w ogóle włączeniu „Satelita" bez internetu (później styl może już być w pamięci podręcznej MapLibre).
+- 2026-11-14 – widok satelitarny przetestowany przez Miłosza: działa; `main` wypchnięty. Powstały makiety trzech kierunków wyglądu; Miłosz chce szerzej: aplikacji interaktywnej. Dopisano punkty 57–63, rozbito 19 na 19a–19c, ustalono „pakiet interaktywny" i zadanie „odtwarzanie wędrówki".
