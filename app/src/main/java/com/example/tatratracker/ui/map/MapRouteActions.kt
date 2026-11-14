@@ -37,8 +37,8 @@ import com.example.tatratracker.ui.theme.TatraDark
 import com.example.tatratracker.ui.theme.TatraGreen
 import com.example.tatratracker.ui.theme.TatraGreenVerySoft
 import com.example.tatratracker.ui.theme.TatraSurface
+import com.example.tatratracker.ui.format.TatraFormat
 import com.example.tatratracker.ui.theme.TatraTextMuted
-import java.util.Locale
 
 @Composable
 internal fun MapRouteQuickActions(
@@ -197,19 +197,15 @@ internal fun SavePlannedRouteDialog(
                             label =
                                 "Dystans",
                             value =
-                                String.format(
-                                    Locale.getDefault(),
-                                    "%.2f km",
-                                    route.distanceKm
-                                )
+                                TatraFormat.distance(route.distanceKm * 1000.0)
                         )
 
                         RouteSummaryLine(
                             label =
                                 "Szacowany czas",
                             value =
-                                formatRouteDuration(
-                                    route.durationSeconds
+                                TatraFormat.duration(
+                                    route.durationSeconds.takeIf { it > 0 }
                                 )
                         )
 
@@ -221,14 +217,14 @@ internal fun SavePlannedRouteDialog(
                                     label =
                                         "Podejście",
                                     value =
-                                        "${profile.totalAscentMeters} m"
+                                        TatraFormat.elevation(profile.totalAscentMeters)
                                 )
 
                                 RouteSummaryLine(
                                     label =
                                         "Zejście",
                                     value =
-                                        "${profile.totalDescentMeters} m"
+                                        TatraFormat.elevation(profile.totalDescentMeters)
                                 )
                             }
                     }
@@ -503,37 +499,5 @@ private fun RouteSummaryLine(
                     .typography
                     .titleSmall
         )
-    }
-}
-
-private fun formatRouteDuration(
-    seconds: Int
-): String {
-
-    if (
-        seconds <= 0
-    ) {
-        return "—"
-    }
-
-    val totalMinutes =
-        seconds / 60
-
-    val hours =
-        totalMinutes / 60
-
-    val minutes =
-        totalMinutes % 60
-
-    return when {
-
-        hours <= 0 ->
-            "$minutes min"
-
-        minutes == 0 ->
-            "$hours h"
-
-        else ->
-            "$hours h $minutes min"
     }
 }

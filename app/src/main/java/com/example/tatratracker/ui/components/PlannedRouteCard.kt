@@ -23,6 +23,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.example.tatratracker.data.PlannedRouteEntity
+import com.example.tatratracker.ui.format.TatraFormat
 import com.example.tatratracker.ui.theme.TatraDark
 import com.example.tatratracker.ui.theme.TatraGreen
 import com.example.tatratracker.ui.theme.TatraGreenSoft
@@ -221,12 +222,7 @@ fun PlannedRouteCard(
                 PlannedMetric(
                     label = "Dystans",
                     value =
-                        String.format(
-                            Locale.getDefault(),
-                            "%.2f km",
-                            route.distanceMeters /
-                                    1000.0
-                        ),
+                        TatraFormat.distance(route.distanceMeters),
                     modifier =
                         Modifier.weight(1f)
                 )
@@ -234,9 +230,7 @@ fun PlannedRouteCard(
                 PlannedMetric(
                     label = "Czas",
                     value =
-                        formatDuration(
-                            route.durationSeconds
-                        ),
+                        TatraFormat.duration(route.durationSeconds.takeIf { it > 0 }),
                     modifier =
                         Modifier.weight(1f)
                 )
@@ -244,11 +238,7 @@ fun PlannedRouteCard(
                 PlannedMetric(
                     label = "Podejście",
                     value =
-                        route.ascentMeters
-                            ?.let {
-                                "$it m"
-                            }
-                            ?: "—",
+                        TatraFormat.elevation(route.ascentMeters),
                     modifier =
                         Modifier.weight(1f)
                 )
@@ -314,36 +304,4 @@ private fun routeDirectionText(
             ?: "Cel"
 
     return "$start  →  $end"
-}
-
-private fun formatDuration(
-    seconds: Int
-): String {
-
-    if (
-        seconds <= 0
-    ) {
-        return "—"
-    }
-
-    val totalMinutes =
-        seconds / 60
-
-    val hours =
-        totalMinutes / 60
-
-    val minutes =
-        totalMinutes % 60
-
-    return when {
-
-        hours <= 0 ->
-            "$minutes min"
-
-        minutes == 0 ->
-            "$hours h"
-
-        else ->
-            "$hours h $minutes min"
-    }
 }

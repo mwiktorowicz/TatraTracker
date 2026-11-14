@@ -4,6 +4,8 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.tatratracker.data.AppDatabase
+import com.example.tatratracker.data.AppSettings
+import com.example.tatratracker.data.AppSettingsStore
 import com.example.tatratracker.data.MapLayerSettingsStore
 import com.example.tatratracker.data.SavedPlaceCategory
 import com.example.tatratracker.data.SavedPlaceEntity
@@ -59,6 +61,8 @@ class MapViewModel(
 
     private val layerSettingsStore = MapLayerSettingsStore(application)
 
+    private val appSettingsStore = AppSettingsStore(application)
+
     private val _layerSettings = MutableStateFlow(MapLayerSettings())
 
     /** Widoczność warstw mapy, wczytana z DataStore przy otwarciu mapy. */
@@ -104,6 +108,14 @@ class MapViewModel(
         viewModelScope.launch {
             layerSettingsStore.save(settings)
         }
+    }
+
+    /**
+     * Aktualne ustawienia z ekranu Ustawień. Czytane przy każdym wyznaczeniu trasy,
+     * więc zmiana działa od następnego wyznaczenia, także gdy mapa była otwarta w tle.
+     */
+    suspend fun currentAppSettings(): AppSettings {
+        return appSettingsStore.settings.first()
     }
 
     /** „Dodaj własny punkt”: zapis w Schroniskach i punktach, kategoria „Inne”. */

@@ -42,6 +42,7 @@ import com.example.tatratracker.poi.ActivityPoiDetectionResult
 import com.example.tatratracker.poi.PoiHistoryRebuildResult
 import com.example.tatratracker.poi.PoiHistoryRebuilder
 import com.example.tatratracker.ui.components.TatraBadgeStyle
+import com.example.tatratracker.ui.format.TatraFormat
 import com.example.tatratracker.ui.components.TatraCard
 import com.example.tatratracker.ui.components.TatraLoadingState
 import com.example.tatratracker.ui.components.TatraPrimaryButton
@@ -701,38 +702,9 @@ private fun ImportSummary(
     poiDetectionMessage: String?
 ) {
 
-    val totalSeconds =
-        imported
-            .durationSeconds
-            .toLong()
-
-    val hours =
-        totalSeconds /
-                3600
-
-    val minutes =
-        (
-                totalSeconds %
-                        3600
-                ) /
-                60
-
-    val seconds =
-        totalSeconds %
-                60
-
+    // Czas zegarowy („7:50:18”) zostaje na tym ekranie, tak jak był.
     val duration =
-        String.format(
-            Locale.getDefault(),
-            "%02d:%02d:%02d",
-            hours,
-            minutes,
-            seconds
-        )
-
-    val distanceKm =
-        imported.distanceMeters /
-                1000.0
+        TatraFormat.clockDuration(imported.durationSeconds.toLong())
 
     TatraCard(
         modifier =
@@ -811,11 +783,7 @@ private fun ImportSummary(
                 label =
                     "Dystans",
                 value =
-                    String.format(
-                        Locale.getDefault(),
-                        "%.2f km",
-                        distanceKm
-                    )
+                    TatraFormat.distance(imported.distanceMeters)
             )
 
             SummaryRow(
@@ -845,16 +813,7 @@ private fun ImportSummary(
                 label =
                     "Śr. tętno",
                 value =
-                    if (
-                        imported.averageHeartRate > 0
-                    ) {
-
-                        "${imported.averageHeartRate} bpm"
-
-                    } else {
-
-                        "Brak danych"
-                    }
+                    TatraFormat.heartRate(imported.averageHeartRate)
             )
 
             SummaryRow(

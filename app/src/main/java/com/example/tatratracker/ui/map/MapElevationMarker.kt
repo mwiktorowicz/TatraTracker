@@ -1,6 +1,7 @@
 package com.example.tatratracker.ui.map
 
 import android.graphics.Color
+import com.example.tatratracker.ui.format.TatraFormat
 import org.json.JSONArray
 import org.json.JSONObject
 import org.maplibre.android.maps.Style
@@ -9,7 +10,6 @@ import org.maplibre.android.style.layers.CircleLayer
 import org.maplibre.android.style.layers.PropertyFactory
 import org.maplibre.android.style.layers.SymbolLayer
 import org.maplibre.android.style.sources.GeoJsonSource
-import java.util.Locale
 
 private const val ELEVATION_MARKER_SOURCE_ID =
     "tt-elevation-marker-source"
@@ -183,12 +183,9 @@ internal fun updateElevationMarker(
     }
 
     val label =
-        String.format(
-            Locale.US,
-            "%.1f km • %.0f m",
-            sample.distanceMeters / 1000.0,
-            sample.elevationMeters
-        )
+        TatraFormat.distance(sample.distanceMeters) +
+            " • " +
+            TatraFormat.elevation(sample.elevationMeters)
 
     val coordinates =
         JSONArray()

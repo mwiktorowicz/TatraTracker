@@ -78,13 +78,6 @@ class RouteElevationRepository {
     companion object {
 
         /*
-         * Próbkujemy mniej więcej
-         * co 100 metrów.
-         */
-        private const val MIN_SAMPLE_DISTANCE_METERS =
-            100.0
-
-        /*
          * Maksymalna liczba próbek
          * jednej trasy.
          */
@@ -118,8 +111,13 @@ class RouteElevationRepository {
      * =====================================================
      */
 
+    /**
+     * [sampleDistanceMeters] – docelowa odległość między próbkami (ustawienie „Próbkowanie
+     * wysokości”); na długiej trasie rośnie tak, żeby nie przekroczyć MAX_SAMPLES.
+     */
     suspend fun calculateProfile(
-        route: PlannedRoute
+        route: PlannedRoute,
+        sampleDistanceMeters: Double
     ): ElevationProfileResponse {
 
         if (
@@ -145,7 +143,8 @@ class RouteElevationRepository {
                  */
                 val sampledLocations =
                     resampleRoute(
-                        route.points
+                        route.points,
+                        sampleDistanceMeters
                     )
 
                 if (
@@ -448,7 +447,8 @@ class RouteElevationRepository {
 
 
     private fun resampleRoute(
-        routePoints: List<LatLng>
+        routePoints: List<LatLng>,
+        minSampleDistanceMeters: Double
     ): List<SampledLocation> {
 
         if (
@@ -501,7 +501,7 @@ class RouteElevationRepository {
          */
         val sampleDistance =
             max(
-                MIN_SAMPLE_DISTANCE_METERS,
+                minSampleDistanceMeters,
 
                 totalDistance /
                         (

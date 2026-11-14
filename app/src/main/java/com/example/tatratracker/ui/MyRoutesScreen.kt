@@ -33,6 +33,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.tatratracker.data.PlannedRouteEntity
 import com.example.tatratracker.gpx.GpxPlannedRouteImportResult
 import com.example.tatratracker.ui.components.PlannedRouteCard
+import com.example.tatratracker.ui.format.TatraFormat
 import com.example.tatratracker.ui.components.TatraEmptyState
 import com.example.tatratracker.ui.components.TatraFeatureDialog
 import com.example.tatratracker.ui.components.TatraLoadingState
@@ -45,7 +46,6 @@ import com.example.tatratracker.ui.theme.TatraSpacing
 import com.example.tatratracker.viewmodel.GpxRouteImportOutcome
 import com.example.tatratracker.viewmodel.PlannedRoutesViewModel
 import kotlinx.coroutines.launch
-import java.util.Locale
 
 @Composable
 fun MyRoutesScreen(
@@ -197,11 +197,10 @@ fun MyRoutesScreen(
             )
         }
 
-    val totalDistanceKm =
+    val totalDistanceMeters =
         routes.sumOf {
             it.distanceMeters
-        } /
-                1000.0
+        }
 
     Column(
         modifier =
@@ -280,20 +279,7 @@ fun MyRoutesScreen(
                     label =
                         "Dystans",
                     value =
-                        if (
-                            routes.isEmpty()
-                        ) {
-
-                            "0 km"
-
-                        } else {
-
-                            String.format(
-                                Locale.getDefault(),
-                                "%.1f km",
-                                totalDistanceKm
-                            )
-                        },
+                        TatraFormat.distance(totalDistanceMeters),
                     helper =
                         "Łącznie",
                     modifier =
@@ -420,12 +406,11 @@ fun MyRoutesScreen(
  */
 private fun importedRouteSummary(imported: GpxPlannedRouteImportResult): String {
     val draft = imported.draft
-    val distanceKm = draft.distanceMeters / 1000.0
 
     return buildString {
         append("„${draft.name}” została zapisana w Moich trasach.")
         append("\n\nDystans: ")
-        append(String.format(Locale.getDefault(), "%.2f km", distanceKm))
+        append(TatraFormat.distance(draft.distanceMeters))
         append("\nPunkty geometrii: ${imported.geometryPointCount}")
 
         if (imported.waypointCount > 0) {
@@ -433,7 +418,10 @@ private fun importedRouteSummary(imported: GpxPlannedRouteImportResult): String 
         }
 
         if (draft.minElevationMeters != null && draft.maxElevationMeters != null) {
-            append("\nWysokość: ${draft.minElevationMeters}–${draft.maxElevationMeters} m")
+            append(
+                "\nWysokość: ${draft.minElevationMeters}–" +
+                    TatraFormat.elevation(draft.maxElevationMeters)
+            )
         }
     }
 }

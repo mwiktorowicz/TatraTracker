@@ -39,6 +39,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.tatratracker.data.ActivityEntity
 import com.example.tatratracker.ui.components.PlannedRouteCard
+import com.example.tatratracker.ui.format.TatraFormat
 import com.example.tatratracker.ui.components.TatraBadgeStyle
 import com.example.tatratracker.ui.components.TatraCard
 import com.example.tatratracker.ui.components.TatraEmptyState
@@ -57,6 +58,7 @@ import com.example.tatratracker.viewmodel.PlannedRoutesViewModel
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import kotlin.math.roundToInt
 
 @Composable
 fun HistoryScreen(
@@ -462,14 +464,11 @@ private fun ActivityHistoryItem(
             )
         )
 
-    val distanceKm =
-        activity.distanceMeters /
-                1000.0
+    val distanceText =
+        TatraFormat.distance(activity.distanceMeters)
 
     val durationText =
-        formatDuration(
-            activity.durationMillis
-        )
+        TatraFormat.durationMillis(activity.durationMillis)
 
     val sourceLabel =
         activityFormat(
@@ -484,11 +483,11 @@ private fun ActivityHistoryItem(
             0.0
         ) {
 
-            "${activity.minAltitudeMeters.toInt()}–${activity.maxAltitudeMeters.toInt()} m"
+            "${activity.minAltitudeMeters.roundToInt()}–${TatraFormat.elevation(activity.maxAltitudeMeters)}"
 
         } else {
 
-            "—"
+            TatraFormat.NO_DATA
         }
 
     TatraCard(
@@ -634,11 +633,7 @@ private fun ActivityHistoryItem(
                     label =
                         "Dystans",
                     value =
-                        String.format(
-                            Locale.getDefault(),
-                            "%.2f km",
-                            distanceKm
-                        ),
+                        distanceText,
                     modifier =
                         Modifier.weight(
                             1f
@@ -713,7 +708,7 @@ private fun ActivityHistoryItem(
 
                         Text(
                             text =
-                                "Śr. puls ${activity.avgHeartRate} bpm",
+                                "Śr. puls ${TatraFormat.heartRate(activity.avgHeartRate)}",
                             color =
                                 TatraTextMuted,
                             style =
@@ -794,35 +789,5 @@ private fun activityFormat(
 
         else ->
             "IMPORT"
-    }
-}
-
-private fun formatDuration(
-    durationMillis: Long
-): String {
-
-    val totalMinutes =
-        durationMillis /
-                1000 /
-                60
-
-    val hours =
-        totalMinutes /
-                60
-
-    val minutes =
-        totalMinutes %
-                60
-
-    return when {
-
-        hours <= 0 ->
-            "$minutes min"
-
-        minutes == 0L ->
-            "$hours h"
-
-        else ->
-            "$hours h $minutes min"
     }
 }

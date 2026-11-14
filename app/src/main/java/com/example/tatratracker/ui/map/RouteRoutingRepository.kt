@@ -1,5 +1,6 @@
 package com.example.tatratracker.ui.map
 
+import com.example.tatratracker.data.RoutingProfile
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
@@ -71,7 +72,8 @@ class RouteRoutingRepository {
         )
 
     suspend fun calculateRoute(
-        state: RoutePlanningState
+        state: RoutePlanningState,
+        profile: RoutingProfile
     ): RouteCalculationResponse {
 
         val start =
@@ -120,7 +122,8 @@ class RouteRoutingRepository {
                 val response =
                     tryCalculate(
                         endpoint = endpoint,
-                        routePoints = routePoints
+                        routePoints = routePoints,
+                        profile = profile
                     )
 
                 if (
@@ -144,7 +147,8 @@ class RouteRoutingRepository {
 
     private fun tryCalculate(
         endpoint: String,
-        routePoints: List<RoutePlanPoint>
+        routePoints: List<RoutePlanPoint>,
+        profile: RoutingProfile
     ): RouteCalculationResponse {
 
         var connection:
@@ -197,10 +201,12 @@ class RouteRoutingRepository {
                      * preferuj trasę najkrótszą
                      * przestrzennie.
                      */
-                    .put(
-                        "shortest",
-                        true
-                    )
+                    // Profil standardowy = to samo żądanie bez wymuszania najkrótszej drogi.
+                    .apply {
+                        if (profile == RoutingProfile.SHORTEST) {
+                            put("shortest", true)
+                        }
+                    }
 
                     /*
                      * Standardowo Valhalla

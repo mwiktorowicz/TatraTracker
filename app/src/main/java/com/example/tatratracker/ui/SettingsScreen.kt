@@ -15,7 +15,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Landscape
 import androidx.compose.material.icons.outlined.Layers
 import androidx.compose.material.icons.outlined.Route
-import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
@@ -23,277 +22,137 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import com.example.tatratracker.ui.components.TatraBadgeStyle
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.tatratracker.data.AppSettings
+import com.example.tatratracker.data.ElevationSampling
+import com.example.tatratracker.data.RoutingProfile
 import com.example.tatratracker.ui.components.TatraCard
 import com.example.tatratracker.ui.components.TatraListRow
 import com.example.tatratracker.ui.components.TatraSectionHeader
-import com.example.tatratracker.ui.components.TatraStatusBadge
 import com.example.tatratracker.ui.components.TatraSubScreenHeader
 import com.example.tatratracker.ui.theme.TatraBackground
 import com.example.tatratracker.ui.theme.TatraDark
-import com.example.tatratracker.ui.theme.TatraGreenVerySoft
 import com.example.tatratracker.ui.theme.TatraSpacing
 import com.example.tatratracker.ui.theme.TatraTextMuted
+import com.example.tatratracker.viewmodel.SettingsViewModel
 
 @Composable
 fun SettingsScreen(
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    viewModel: SettingsViewModel = viewModel()
 ) {
-    var metricUnits by remember {
-        mutableStateOf(true)
-    }
+    val settings by viewModel.settings.collectAsState()
+    var openDialog by remember { mutableStateOf<SettingsDialog?>(null) }
 
-    var showTrailLabels by remember {
-        mutableStateOf(true)
-    }
+    val current = settings
+    if (current != null) {
+        when (openDialog) {
+            SettingsDialog.ROUTING -> SettingsChoiceDialog(
+                title = "Profil routingu",
+                description = null,
+                options = ROUTING_OPTIONS,
+                selected = current.routingProfile,
+                onSelected = { profile ->
+                    viewModel.setRoutingProfile(profile)
+                    openDialog = null
+                },
+                onDismiss = { openDialog = null }
+            )
 
-    var showPoi by remember {
-        mutableStateOf(true)
-    }
+            SettingsDialog.ELEVATION -> SettingsChoiceDialog(
+                title = "Próbkowanie wysokości",
+                description = ELEVATION_SAMPLING_HINT,
+                options = ELEVATION_OPTIONS,
+                selected = current.elevationSampling,
+                onSelected = { sampling ->
+                    viewModel.setElevationSampling(sampling)
+                    openDialog = null
+                },
+                onDismiss = { openDialog = null }
+            )
 
-    var autoFitRoute by remember {
-        mutableStateOf(true)
-    }
-
-    var selectedMapStyle by remember {
-        mutableStateOf("Landscape")
-    }
-
-    var selectedRoutingProfile by remember {
-        mutableStateOf("Najkrótsza trasa piesza")
-    }
-
-    var selectedElevationSampling by remember {
-        mutableStateOf("Około 100 m")
-    }
-
-    var choiceDialog by remember {
-        mutableStateOf<SettingsChoiceDialog?>(null)
-    }
-
-    choiceDialog?.let { dialog ->
-        SettingsChoiceDialogContent(
-            dialog = dialog,
-            onSelected = { selected ->
-                when (dialog.type) {
-                    SettingsChoiceType.MAP_STYLE ->
-                        selectedMapStyle = selected
-
-                    SettingsChoiceType.ROUTING ->
-                        selectedRoutingProfile = selected
-
-                    SettingsChoiceType.ELEVATION ->
-                        selectedElevationSampling = selected
-                }
-
-                choiceDialog = null
-            },
-            onDismiss = {
-                choiceDialog = null
-            }
-        )
+            null -> Unit
+        }
     }
 
     Column(
-        modifier =
-            Modifier
-                .fillMaxSize()
-                .background(TatraBackground)
-                .verticalScroll(rememberScrollState())
+        modifier = Modifier
+            .fillMaxSize()
+            .background(TatraBackground)
+            .verticalScroll(rememberScrollState())
     ) {
         TatraSubScreenHeader(
             title = "Ustawienia",
-            subtitle = "Jednostki, mapa i zachowanie aplikacji",
+            subtitle = "Planowanie trasy i zachowanie mapy",
             onBack = onBack
         )
 
         Column(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = TatraSpacing.lg)
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = TatraSpacing.lg)
         ) {
-            TatraCard(
-                modifier = Modifier.fillMaxWidth(),
-                backgroundColor = TatraGreenVerySoft
-            ) {
-                Column {
-                    TatraStatusBadge(
-                        text = "Podgląd ustawień",
-                        style = TatraBadgeStyle.Info
-                    )
-
-                    Text(
-                        text = "W tym etapie możesz ustawić docelowy wygląd i zachowanie aplikacji. Zapis preferencji oraz ich podpięcie do mapy zrobimy później.",
-                        color = TatraTextMuted,
-                        style = MaterialTheme.typography.bodyMedium,
-                        modifier = Modifier.padding(top = TatraSpacing.sm)
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(TatraSpacing.xl))
-            TatraSectionHeader(title = "Jednostki")
-
             TatraCard(modifier = Modifier.fillMaxWidth()) {
-                SettingSwitchRow(
-                    title = "Jednostki metryczne",
-                    subtitle =
-                        if (metricUnits) {
-                            "Kilometry, metry i km/h"
-                        } else {
-                            "Mile, stopy i mph — podgląd"
-                        },
-                    checked = metricUnits,
-                    onCheckedChange = {
-                        metricUnits = it
-                    }
+                TatraListRow(
+                    title = "Warstwy mapy włączysz na mapie, przyciskiem Warstwy.",
+                    icon = Icons.Outlined.Layers
                 )
-            }
-
-            Spacer(modifier = Modifier.height(TatraSpacing.xl))
-            TatraSectionHeader(title = "Mapa")
-
-            TatraCard(modifier = Modifier.fillMaxWidth()) {
-                Column {
-                    TatraListRow(
-                        title = "Styl mapy",
-                        subtitle = selectedMapStyle,
-                        icon = Icons.Outlined.Layers,
-                        badge = {
-                            TatraStatusBadge(
-                                text = "Podgląd",
-                                style = TatraBadgeStyle.Neutral
-                            )
-                        },
-                        onClick = {
-                            choiceDialog =
-                                SettingsChoiceDialog(
-                                    type = SettingsChoiceType.MAP_STYLE,
-                                    title = "Styl mapy",
-                                    selected = selectedMapStyle,
-                                    options =
-                                        listOf(
-                                            "Landscape",
-                                            "Outdoor",
-                                            "Jasny podstawowy"
-                                        )
-                                )
-                        }
-                    )
-
-                    SettingSwitchRow(
-                        title = "Etykiety szlaków",
-                        subtitle = "Pokazuj oznaczenia i podpisy tras",
-                        checked = showTrailLabels,
-                        onCheckedChange = {
-                            showTrailLabels = it
-                        }
-                    )
-
-                    SettingSwitchRow(
-                        title = "Punkty POI",
-                        subtitle = "Schroniska, szczyty, jaskinie i woda",
-                        checked = showPoi,
-                        onCheckedChange = {
-                            showPoi = it
-                        }
-                    )
-                }
             }
 
             Spacer(modifier = Modifier.height(TatraSpacing.xl))
             TatraSectionHeader(title = "Planowanie trasy")
 
-            TatraCard(modifier = Modifier.fillMaxWidth()) {
-                Column {
-                    SettingSwitchRow(
-                        title = "Dopasuj kamerę po wyznaczeniu",
-                        subtitle = "Pokaż automatycznie całą gotową trasę",
-                        checked = autoFitRoute,
-                        onCheckedChange = {
-                            autoFitRoute = it
-                        }
-                    )
-
-                    TatraListRow(
-                        title = "Profil routingu",
-                        subtitle = selectedRoutingProfile,
-                        icon = Icons.Outlined.Route,
-                        badge = {
-                            TatraStatusBadge(
-                                text = "Podgląd",
-                                style = TatraBadgeStyle.Neutral
-                            )
-                        },
-                        onClick = {
-                            choiceDialog =
-                                SettingsChoiceDialog(
-                                    type = SettingsChoiceType.ROUTING,
-                                    title = "Profil routingu",
-                                    selected = selectedRoutingProfile,
-                                    options =
-                                        listOf(
-                                            "Najkrótsza trasa piesza",
-                                            "Standardowa trasa piesza",
-                                            "Preferuj szlaki"
-                                        )
-                                )
-                        }
-                    )
-
-                    TatraListRow(
-                        title = "Próbkowanie wysokości",
-                        subtitle = selectedElevationSampling,
-                        icon = Icons.Outlined.Landscape,
-                        badge = {
-                            TatraStatusBadge(
-                                text = "Podgląd",
-                                style = TatraBadgeStyle.Neutral
-                            )
-                        },
-                        onClick = {
-                            choiceDialog =
-                                SettingsChoiceDialog(
-                                    type = SettingsChoiceType.ELEVATION,
-                                    title = "Próbkowanie wysokości",
-                                    selected = selectedElevationSampling,
-                                    options =
-                                        listOf(
-                                            "Około 50 m",
-                                            "Około 100 m",
-                                            "Około 200 m"
-                                        )
-                                )
-                        }
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(TatraSpacing.xl))
-            TatraSectionHeader(title = "Aplikacja")
-
-            TatraCard(modifier = Modifier.fillMaxWidth()) {
-                TatraListRow(
-                    title = "Ustawienia zaawansowane",
-                    subtitle = "Cache, diagnostyka i źródła danych",
-                    icon = Icons.Outlined.Settings,
-                    badge = {
-                        TatraStatusBadge(
-                            text = "W późniejszym etapie",
-                            style = TatraBadgeStyle.Info
-                        )
-                    }
+            // Do końca pierwszego odczytu nie pokazujemy wartości, żeby przełącznik nie mignął.
+            if (current != null) {
+                RoutePlanningSettings(
+                    settings = current,
+                    onAutoFitRouteChange = viewModel::setAutoFitRoute,
+                    onRoutingClick = { openDialog = SettingsDialog.ROUTING },
+                    onElevationClick = { openDialog = SettingsDialog.ELEVATION }
                 )
             }
 
             Spacer(modifier = Modifier.height(TatraSpacing.xl))
+        }
+    }
+}
+
+@Composable
+private fun RoutePlanningSettings(
+    settings: AppSettings,
+    onAutoFitRouteChange: (Boolean) -> Unit,
+    onRoutingClick: () -> Unit,
+    onElevationClick: () -> Unit
+) {
+    TatraCard(modifier = Modifier.fillMaxWidth()) {
+        Column {
+            SettingSwitchRow(
+                title = "Dopasuj kamerę po wyznaczeniu",
+                subtitle = "Pokaż automatycznie całą gotową trasę",
+                checked = settings.autoFitRoute,
+                onCheckedChange = onAutoFitRouteChange
+            )
+
+            TatraListRow(
+                title = "Profil routingu",
+                subtitle = ROUTING_OPTIONS.labelOf(settings.routingProfile),
+                icon = Icons.Outlined.Route,
+                onClick = onRoutingClick
+            )
+
+            TatraListRow(
+                title = "Próbkowanie wysokości",
+                subtitle = ELEVATION_OPTIONS.labelOf(settings.elevationSampling),
+                icon = Icons.Outlined.Landscape,
+                onClick = onElevationClick
+            )
         }
     }
 }
@@ -306,15 +165,12 @@ private fun SettingSwitchRow(
     onCheckedChange: (Boolean) -> Unit
 ) {
     Row(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .padding(vertical = TatraSpacing.sm),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = TatraSpacing.sm),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Column(
-            modifier = Modifier.weight(1f)
-        ) {
+        Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = title,
                 color = TatraDark,
@@ -337,40 +193,53 @@ private fun SettingSwitchRow(
 }
 
 @Composable
-private fun SettingsChoiceDialogContent(
-    dialog: SettingsChoiceDialog,
-    onSelected: (String) -> Unit,
+private fun <T> SettingsChoiceDialog(
+    title: String,
+    description: String?,
+    options: List<SettingsChoice<T>>,
+    selected: T,
+    onSelected: (T) -> Unit,
     onDismiss: () -> Unit
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = {
-            Text(dialog.title)
-        },
+        title = { Text(title) },
         text = {
             Column {
-                dialog.options.forEach { option ->
+                if (description != null) {
+                    Text(
+                        text = description,
+                        color = TatraTextMuted,
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.padding(bottom = TatraSpacing.sm)
+                    )
+                }
+
+                options.forEach { option ->
                     Row(
-                        modifier =
-                            Modifier
-                                .fillMaxWidth()
-                                .clickable {
-                                    onSelected(option)
-                                }
-                                .padding(vertical = TatraSpacing.xs),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onSelected(option.value) }
+                            .padding(vertical = TatraSpacing.xs),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         RadioButton(
-                            selected = option == dialog.selected,
-                            onClick = {
-                                onSelected(option)
-                            }
+                            selected = option.value == selected,
+                            onClick = { onSelected(option.value) }
                         )
 
-                        Text(
-                            text = option,
-                            modifier = Modifier.padding(start = TatraSpacing.xs)
-                        )
+                        Column(modifier = Modifier.padding(start = TatraSpacing.xs)) {
+                            Text(text = option.label)
+
+                            if (option.description != null) {
+                                Text(
+                                    text = option.description,
+                                    color = TatraTextMuted,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    modifier = Modifier.padding(top = TatraSpacing.xxs)
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -383,15 +252,40 @@ private fun SettingsChoiceDialogContent(
     )
 }
 
-private data class SettingsChoiceDialog(
-    val type: SettingsChoiceType,
-    val title: String,
-    val selected: String,
-    val options: List<String>
-)
-
-private enum class SettingsChoiceType {
-    MAP_STYLE,
+private enum class SettingsDialog {
     ROUTING,
     ELEVATION
 }
+
+private data class SettingsChoice<T>(
+    val value: T,
+    val label: String,
+    val description: String? = null
+)
+
+private fun <T> List<SettingsChoice<T>>.labelOf(value: T): String {
+    return first { it.value == value }.label
+}
+
+private val ROUTING_OPTIONS = listOf(
+    SettingsChoice(
+        value = RoutingProfile.SHORTEST,
+        label = "Najkrótsza trasa piesza",
+        description = "Wybiera możliwie najkrótszą drogę, bez względu na rodzaj ścieżki."
+    ),
+    SettingsChoice(
+        value = RoutingProfile.STANDARD,
+        label = "Standardowa trasa piesza",
+        description = "Bierze pod uwagę rodzaj drogi, więc może wybrać nieco dłuższą, " +
+            "ale wygodniejszą trasę."
+    )
+)
+
+private val ELEVATION_OPTIONS = listOf(
+    SettingsChoice(value = ElevationSampling.METERS_50, label = "Około 50 m"),
+    SettingsChoice(value = ElevationSampling.METERS_100, label = "Około 100 m"),
+    SettingsChoice(value = ElevationSampling.METERS_200, label = "Około 200 m")
+)
+
+private const val ELEVATION_SAMPLING_HINT =
+    "Gęstsze próbkowanie daje dokładniejszy profil, ale wolniej się liczy."

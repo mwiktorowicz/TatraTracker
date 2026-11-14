@@ -342,6 +342,9 @@ fun MapScreen(
             null
     }
 
+    // Zapisana trasa otwarta do edycji, której widoku jeszcze nie dopasowano.
+    var editRouteToFit by remember { mutableStateOf<PlannedRoute?>(null) }
+
     LaunchedEffect(
         editRouteId
     ) {
@@ -370,6 +373,8 @@ fun MapScreen(
                 plannedRoute =
                     editData
                         .toPlannedRoute()
+
+                editRouteToFit = plannedRoute
 
                 elevationProfile =
                     editData
@@ -809,45 +814,18 @@ fun MapScreen(
         )
     }
 
-    LaunchedEffect(
-        editRouteId,
-        plannedRoute,
-        mapLibreMap
-    ) {
+    // Dopasowanie widoku po otwarciu zapisanej trasy do edycji: raz, gdy trasa i mapa są gotowe.
+    // Kolejne przeliczenia idą przez „Wyznacz” i słuchają ustawienia „Dopasuj kamerę”.
+    LaunchedEffect(editRouteToFit, mapLibreMap) {
+        val route = editRouteToFit ?: return@LaunchedEffect
+        val map = mapLibreMap ?: return@LaunchedEffect
 
-        if (
-            editRouteId == null
-        ) {
-            return@LaunchedEffect
+        if (route.points.size >= 2) {
+            val bounds = LatLngBounds.fromLatLngs(route.points)
+            map.animateCamera(CameraUpdateFactory.newLatLngBounds(bounds, 90))
         }
 
-        val route =
-            plannedRoute
-                ?: return@LaunchedEffect
-
-        val map =
-            mapLibreMap
-                ?: return@LaunchedEffect
-
-        if (
-            route.points.size >=
-            2
-        ) {
-
-            val bounds =
-                LatLngBounds
-                    .fromLatLngs(
-                        route.points
-                    )
-
-            map.animateCamera(
-                CameraUpdateFactory
-                    .newLatLngBounds(
-                        bounds,
-                        90
-                    )
-            )
-        }
+        editRouteToFit = null
     }
 
     val suggestedRouteName =
@@ -1441,10 +1419,15 @@ fun MapScreen(
                                 selectedElevationSample =
                                     null
 
+                                // Ustawienia z chwili wyznaczenia; późniejsza zmiana
+                                // nie przelicza tej trasy.
+                                val settings = mapViewModel.currentAppSettings()
+
                                 val response =
                                     routingRepository
                                         .calculateRoute(
-                                            routePlanningState
+                                            routePlanningState,
+                                            settings.routingProfile
                                         )
 
                                 if (
@@ -1475,6 +1458,7 @@ fun MapScreen(
                                         RoutePlannerSheetLevel.COMPACT
 
                                     if (
+                                        settings.autoFitRoute &&
                                         route.points.size >=
                                         2
                                     ) {
@@ -1501,7 +1485,8 @@ fun MapScreen(
                                     val elevationResponse =
                                         elevationRepository
                                             .calculateProfile(
-                                                route
+                                                route,
+                                                settings.elevationSampling.meters.toDouble()
                                             )
 
                                     if (

@@ -21,12 +21,12 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.dp
 import com.example.tatratracker.model.TrackPoint
 import com.example.tatratracker.ui.components.TatraCard
+import com.example.tatratracker.ui.format.TatraFormat
 import com.example.tatratracker.ui.theme.TatraDark
 import com.example.tatratracker.ui.theme.TatraGreen
 import com.example.tatratracker.ui.theme.TatraOutline
 import com.example.tatratracker.ui.theme.TatraSpacing
 import com.example.tatratracker.ui.theme.TatraTextMuted
-import java.util.Locale
 import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.roundToInt
@@ -88,25 +88,25 @@ fun ActivityElevationSection(
             ) {
                 ElevationMetric(
                     label = "Podejście",
-                    value = "+${profile.ascentMeters} m",
+                    value = "+${TatraFormat.elevation(profile.ascentMeters)}",
                     modifier = Modifier.weight(1f)
                 )
 
                 ElevationMetric(
                     label = "Zejście",
-                    value = "-${profile.descentMeters} m",
+                    value = "-${TatraFormat.elevation(profile.descentMeters)}",
                     modifier = Modifier.weight(1f)
                 )
 
                 ElevationMetric(
                     label = "Najwyżej",
-                    value = "${profile.maxElevationMeters} m",
+                    value = TatraFormat.elevation(profile.maxElevationMeters),
                     modifier = Modifier.weight(1f)
                 )
 
                 ElevationMetric(
                     label = "Najniżej",
-                    value = "${profile.minElevationMeters} m",
+                    value = TatraFormat.elevation(profile.minElevationMeters),
                     modifier = Modifier.weight(1f)
                 )
             }
@@ -132,12 +132,7 @@ fun ActivityElevationSection(
                 )
 
                 Text(
-                    text =
-                        String.format(
-                            Locale.getDefault(),
-                            "%.1f km",
-                            profile.totalDistanceMeters / 1000.0
-                        ),
+                    text = TatraFormat.distance(profile.totalDistanceMeters),
                     color = TatraTextMuted,
                     style = MaterialTheme.typography.labelSmall
                 )

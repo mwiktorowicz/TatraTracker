@@ -25,6 +25,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.tatratracker.data.COMPLETED_TRAIL_THRESHOLD
 import com.example.tatratracker.data.TrailProgressState
 import com.example.tatratracker.ui.components.TatraCard
+import com.example.tatratracker.ui.format.TatraFormat
 import com.example.tatratracker.ui.components.TatraErrorState
 import com.example.tatratracker.ui.components.TatraLoadingState
 import com.example.tatratracker.ui.components.TatraPrimaryButton
@@ -127,7 +128,7 @@ fun CompletedTrailsScreen(
 
                 TatraStatCard(
                     label = "Przebyto",
-                    value = result?.let { formatKilometers(it.matchedLengthMeters) } ?: "— km",
+                    value = TatraFormat.distance(result?.matchedLengthMeters),
                     helper = "Po szlakach",
                     modifier = Modifier.weight(1f)
                 )
@@ -151,13 +152,11 @@ fun CompletedTrailsScreen(
 
                 TatraStatCard(
                     label = "Pozostało",
-                    value =
+                    value = TatraFormat.distance(
                         result?.let {
-                            formatKilometers(
-                                (it.totalLengthMeters - it.matchedLengthMeters)
-                                    .coerceAtLeast(0.0)
-                            )
-                        } ?: "— km",
+                            (it.totalLengthMeters - it.matchedLengthMeters).coerceAtLeast(0.0)
+                        }
+                    ),
                     helper = "Do przejścia",
                     modifier = Modifier.weight(1f)
                 )
@@ -216,7 +215,7 @@ private fun summaryTitle(
             "Brak przebytych szlaków"
 
         else ->
-            "Przebyto ${formatKilometers(result.matchedLengthMeters)} szlaków"
+            "Przebyto ${TatraFormat.distance(result.matchedLengthMeters)} szlaków"
     }
 }
 
@@ -240,18 +239,8 @@ private fun summaryMessage(
 
         else ->
             "Na podstawie ${result.matchedTrackCount} z ${state.activityCount} aktywności. " +
-                    "Sieć szlaków TPN i TANAP liczy ${formatKilometers(result.totalLengthMeters)}."
+                    "Sieć szlaków TPN i TANAP liczy ${TatraFormat.distance(result.totalLengthMeters)}."
     }
-}
-
-private fun formatKilometers(
-    meters: Double
-): String {
-    return String.format(
-        Locale.getDefault(),
-        "%.1f km",
-        meters / 1000.0
-    )
 }
 
 internal fun formatPercent(

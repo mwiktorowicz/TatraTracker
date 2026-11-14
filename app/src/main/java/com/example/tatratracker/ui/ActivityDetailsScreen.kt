@@ -40,6 +40,7 @@ import com.example.tatratracker.data.ActivityEntity
 import com.example.tatratracker.export.ActivityGpxExporter
 import com.example.tatratracker.model.TrackPoint
 import com.example.tatratracker.ui.components.TatraBadgeStyle
+import com.example.tatratracker.ui.format.TatraFormat
 import com.example.tatratracker.ui.components.TatraCard
 import com.example.tatratracker.ui.components.TatraErrorState
 import com.example.tatratracker.ui.components.TatraFeatureDialog
@@ -330,13 +331,13 @@ private fun ActivityDetailsContent(
         ) {
             QuickMetricCard(
                 label = "Dystans",
-                value = formatDistance(activity.distanceMeters),
+                value = TatraFormat.distanceExact(activity.distanceMeters.takeIf { it > 0.0 }),
                 modifier = Modifier.weight(1f)
             )
 
             QuickMetricCard(
                 label = "Czas",
-                value = formatDurationCompact(activity.durationMillis),
+                value = TatraFormat.durationMillis(activity.durationMillis.takeIf { it > 0L }),
                 modifier = Modifier.weight(1f)
             )
 
@@ -406,12 +407,14 @@ private fun ActivityDetailsContent(
             ) {
                 DetailRow(
                     label = "Czas całkowity",
-                    value = formatDurationCompact(activity.durationMillis)
+                    value = TatraFormat.durationMillis(activity.durationMillis.takeIf { it > 0L })
                 )
 
                 DetailRow(
                     label = "W ruchu",
-                    value = formatDurationCompact(activity.movingDurationMillis)
+                    value = TatraFormat.durationMillis(
+                        activity.movingDurationMillis.takeIf { it > 0L }
+                    )
                 )
 
                 // Postoje pokazujemy, gdy po zaokrągleniu do minut jest co pokazać.
@@ -419,28 +422,28 @@ private fun ActivityDetailsContent(
                 if (stopsMillis >= 60_000L) {
                     DetailRow(
                         label = "Postoje",
-                        value = formatDurationCompact(stopsMillis)
+                        value = TatraFormat.durationMillis(stopsMillis)
                     )
                 }
 
                 DetailRow(
                     label = "Średnia prędkość",
-                    value = formatSpeed(activity.avgSpeedMs)
+                    value = TatraFormat.speed(activity.avgSpeedMs)
                 )
 
                 DetailRow(
                     label = "Maksymalna prędkość",
-                    value = formatSpeed(activity.maxSpeedMs)
+                    value = TatraFormat.speed(activity.maxSpeedMs)
                 )
 
                 DetailRow(
                     label = "Średnie tempo",
-                    value = formatPace(activity.avgPaceSecPerKm)
+                    value = TatraFormat.pace(activity.avgPaceSecPerKm)
                 )
 
                 DetailRow(
                     label = "Najlepsze tempo",
-                    value = formatPace(activity.maxPaceSecPerKm),
+                    value = TatraFormat.pace(activity.maxPaceSecPerKm),
                     showDivider = false
                 )
             }
@@ -464,22 +467,22 @@ private fun ActivityDetailsContent(
             ) {
                 DetailRow(
                     label = "Najniższy punkt",
-                    value = formatAltitude(activity.minAltitudeMeters)
+                    value = TatraFormat.altitude(activity.minAltitudeMeters)
                 )
 
                 DetailRow(
                     label = "Najwyższy punkt",
-                    value = formatAltitude(activity.maxAltitudeMeters)
+                    value = TatraFormat.altitude(activity.maxAltitudeMeters)
                 )
 
                 DetailRow(
                     label = "Średni puls",
-                    value = formatHeartRate(activity.avgHeartRate)
+                    value = TatraFormat.heartRate(activity.avgHeartRate)
                 )
 
                 DetailRow(
                     label = "Maksymalny puls",
-                    value = formatHeartRate(activity.maxHeartRate)
+                    value = TatraFormat.heartRate(activity.maxHeartRate)
                 )
 
                 DetailRow(
@@ -645,94 +648,5 @@ private fun activityFormat(
     return when (extension) {
         "FIT", "TCX", "GPX" -> extension
         else -> "IMPORT"
-    }
-}
-
-private fun formatDistance(
-    distanceMeters: Double
-): String {
-    return if (distanceMeters > 0.0) {
-        String.format(
-            Locale.getDefault(),
-            "%.2f km",
-            distanceMeters / 1000.0
-        )
-    } else {
-        "—"
-    }
-}
-
-private fun formatDurationCompact(
-    durationMillis: Long
-): String {
-    if (durationMillis <= 0L) {
-        return "—"
-    }
-
-    val totalMinutes = durationMillis / 1000 / 60
-    val hours = totalMinutes / 60
-    val minutes = totalMinutes % 60
-
-    return when {
-        hours <= 0 -> "$minutes min"
-        minutes == 0L -> "$hours h"
-        else -> "$hours h $minutes min"
-    }
-}
-
-private fun formatSpeed(
-    speedMs: Double
-): String {
-    if (speedMs <= 0.0) {
-        return "Brak danych"
-    }
-
-    return String.format(
-        Locale.getDefault(),
-        "%.2f km/h",
-        speedMs * 3.6
-    )
-}
-
-private fun formatPace(
-    secondsPerKm: Double
-): String {
-    if (secondsPerKm <= 0.0) {
-        return "Brak danych"
-    }
-
-    val totalSeconds = secondsPerKm.toLong()
-    val minutes = totalSeconds / 60
-    val seconds = totalSeconds % 60
-
-    return String.format(
-        Locale.getDefault(),
-        "%d:%02d min/km",
-        minutes,
-        seconds
-    )
-}
-
-private fun formatAltitude(
-    altitudeMeters: Double
-): String {
-    if (altitudeMeters <= 0.0) {
-        return "Brak danych"
-    }
-
-    return String.format(
-        Locale.getDefault(),
-        "%.0f m n.p.m.",
-        altitudeMeters
-    )
-}
-
-private fun formatHeartRate(
-    heartRate: Int
-): String {
-    return if (heartRate > 0) {
-        "$heartRate bpm"
-    } else {
-        "Brak danych"
     }
 }

@@ -42,6 +42,7 @@ import com.example.tatratracker.data.PlannedRouteEntity
 import com.example.tatratracker.data.PlannedRoutePointEntity
 import com.example.tatratracker.export.PlannedRouteGpxExporter
 import com.example.tatratracker.ui.components.TatraBadgeStyle
+import com.example.tatratracker.ui.format.TatraFormat
 import com.example.tatratracker.ui.components.TatraCard
 import com.example.tatratracker.ui.components.TatraErrorState
 import com.example.tatratracker.ui.components.TatraFeatureDialog
@@ -560,9 +561,7 @@ private fun PlannedRouteReadyContent(
                     label =
                         "Dystans",
                     value =
-                        formatDistance(
-                            route.distanceMeters
-                        ),
+                        TatraFormat.distanceExact(route.distanceMeters),
                     modifier =
                         Modifier.weight(
                             1f
@@ -573,9 +572,7 @@ private fun PlannedRouteReadyContent(
                     label =
                         "Czas",
                     value =
-                        formatPlannedDuration(
-                            route.durationSeconds
-                        ),
+                        TatraFormat.duration(route.durationSeconds.takeIf { it > 0 }),
                     modifier =
                         Modifier.weight(
                             1f
@@ -596,11 +593,7 @@ private fun PlannedRouteReadyContent(
                     label =
                         "Podejście",
                     value =
-                        route.ascentMeters
-                            ?.let {
-                                "$it m"
-                            }
-                            ?: "—",
+                        TatraFormat.elevation(route.ascentMeters),
                     modifier =
                         Modifier.weight(
                             1f
@@ -611,11 +604,7 @@ private fun PlannedRouteReadyContent(
                     label =
                         "Zejście",
                     value =
-                        route.descentMeters
-                            ?.let {
-                                "$it m"
-                            }
-                            ?: "—",
+                        TatraFormat.elevation(route.descentMeters),
                     modifier =
                         Modifier.weight(
                             1f
@@ -643,11 +632,7 @@ private fun PlannedRouteReadyContent(
                         label =
                             "Najniżej",
                         value =
-                            route.minElevationMeters
-                                ?.let {
-                                    "$it m"
-                                }
-                                ?: "—",
+                            TatraFormat.elevation(route.minElevationMeters),
                         modifier =
                             Modifier.weight(
                                 1f
@@ -658,11 +643,7 @@ private fun PlannedRouteReadyContent(
                         label =
                             "Najwyżej",
                         value =
-                            route.maxElevationMeters
-                                ?.let {
-                                    "$it m"
-                                }
-                                ?: "—",
+                            TatraFormat.elevation(route.maxElevationMeters),
                         modifier =
                             Modifier.weight(
                                 1f
@@ -1069,51 +1050,6 @@ private fun formatPlannedRouteDate(
             timestamp
         )
     )
-}
-
-private fun formatDistance(
-    meters: Double
-): String {
-
-    return String.format(
-        Locale.getDefault(),
-        "%.2f km",
-        meters /
-                1000.0
-    )
-}
-
-private fun formatPlannedDuration(
-    seconds: Int
-): String {
-
-    if (
-        seconds <= 0
-    ) {
-
-        return "—"
-    }
-
-    val totalMinutes =
-        seconds / 60
-
-    val hours =
-        totalMinutes / 60
-
-    val minutes =
-        totalMinutes % 60
-
-    return when {
-
-        hours <= 0 ->
-            "$minutes min"
-
-        minutes == 0 ->
-            "$hours h"
-
-        else ->
-            "$hours h $minutes min"
-    }
 }
 
 private fun formatCoordinates(

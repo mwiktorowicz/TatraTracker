@@ -22,12 +22,12 @@ import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.dp
 import com.example.tatratracker.data.PlannedRoutePointEntity
+import com.example.tatratracker.ui.format.TatraFormat
 import com.example.tatratracker.ui.theme.TatraGreen
 import com.example.tatratracker.ui.theme.TatraGreenVerySoft
 import com.example.tatratracker.ui.theme.TatraOutline
 import com.example.tatratracker.ui.theme.TatraSpacing
 import com.example.tatratracker.ui.theme.TatraTextMuted
-import java.util.Locale
 import kotlin.math.max
 
 @Composable
@@ -111,7 +111,7 @@ fun PlannedRouteElevationProfile(
 
             Text(
                 text =
-                    "${minElevation.toInt()} m",
+                    TatraFormat.elevation(minElevation),
                 color =
                     TatraTextMuted,
                 style =
@@ -122,7 +122,7 @@ fun PlannedRouteElevationProfile(
 
             Text(
                 text =
-                    "${maxElevation.toInt()} m",
+                    TatraFormat.elevation(maxElevation),
                 color =
                     TatraTextMuted,
                 style =
@@ -272,12 +272,7 @@ fun PlannedRouteElevationProfile(
 
             Text(
                 text =
-                    String.format(
-                        Locale.getDefault(),
-                        "%.1f km",
-                        maxDistance /
-                                1000.0
-                    ),
+                    TatraFormat.distance(maxDistance),
                 color =
                     TatraTextMuted,
                 style =

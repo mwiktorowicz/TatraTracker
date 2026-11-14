@@ -146,14 +146,8 @@ fun MoreScreen(
                 Column {
                     TatraListRow(
                         title = "Ustawienia",
-                        subtitle = "Jednostki, mapa i zachowanie aplikacji",
+                        subtitle = "Planowanie trasy i zachowanie mapy",
                         icon = Icons.Outlined.Settings,
-                        badge = {
-                            TatraStatusBadge(
-                                text = "Podgląd",
-                                style = TatraBadgeStyle.Neutral
-                            )
-                        },
                         onClick = onSettingsClick
                     )
 

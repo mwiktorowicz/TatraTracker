@@ -44,6 +44,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.tatratracker.data.TrailProgressState
 import com.example.tatratracker.ui.components.TatraBadgeStyle
+import com.example.tatratracker.ui.format.TatraFormat
 import com.example.tatratracker.ui.components.TatraCard
 import com.example.tatratracker.ui.components.TatraEmptyState
 import com.example.tatratracker.ui.components.TatraScreenHeader
@@ -214,15 +215,16 @@ private fun StatisticsSummary(
         ) {
             TatraStatCard(
                 label = "Dystans",
-                value = formatDistance(state.distanceMeters),
+                value = TatraFormat.distance(state.distanceMeters.takeIf { it > 0.0 }),
                 helper = "Łącznie",
                 modifier = Modifier.weight(1f)
             )
 
             TatraStatCard(
                 label = "Czas",
-                value = formatDuration(state.durationMillis),
-                helper = "W ruchu ${formatDuration(state.movingDurationMillis)}",
+                value = TatraFormat.durationMillis(state.durationMillis.takeIf { it > 0L }),
+                helper = "W ruchu " +
+                    TatraFormat.durationMillis(state.movingDurationMillis.takeIf { it > 0L }),
                 modifier = Modifier.weight(1f)
             )
         }
@@ -240,7 +242,7 @@ private fun StatisticsSummary(
 
             TatraStatCard(
                 label = "Podejście",
-                value = formatElevation(state.totalAscentMeters),
+                value = TatraFormat.elevation(state.totalAscentMeters.takeIf { it > 0.0 }),
                 helper = "Suma podejść",
                 modifier = Modifier.weight(1f)
             )
@@ -285,7 +287,7 @@ private fun DistanceChartCard(
                     }
 
                     TatraStatusBadge(
-                        text = formatDistance(state.distanceMeters),
+                        text = TatraFormat.distance(state.distanceMeters.takeIf { it > 0.0 }),
                         style = TatraBadgeStyle.Success
                     )
                 }
@@ -462,25 +464,19 @@ private fun AdditionalStatistics(
                 StatisticsDetailRow(
                     icon = Icons.Outlined.South,
                     label = "Zejście",
-                    value = formatElevation(state.totalDescentMeters)
+                    value = TatraFormat.elevation(state.totalDescentMeters.takeIf { it > 0.0 })
                 )
 
                 StatisticsDetailRow(
                     icon = Icons.Outlined.FavoriteBorder,
                     label = "Średni puls",
-                    value =
-                        state.averageHeartRate?.let {
-                            "$it bpm"
-                        } ?: "Brak danych"
+                    value = TatraFormat.heartRate(state.averageHeartRate)
                 )
 
                 StatisticsDetailRow(
                     icon = Icons.Outlined.FavoriteBorder,
                     label = "Maksymalny puls",
-                    value =
-                        state.maxHeartRate?.let {
-                            "$it bpm"
-                        } ?: "Brak danych"
+                    value = TatraFormat.heartRate(state.maxHeartRate)
                 )
 
                 StatisticsDetailRow(
@@ -492,7 +488,9 @@ private fun AdditionalStatistics(
                 StatisticsDetailRow(
                     icon = Icons.Outlined.Route,
                     label = "Średni dystans wyjścia",
-                    value = formatDistance(state.averageActivityDistanceMeters),
+                    value = TatraFormat.distance(
+                        state.averageActivityDistanceMeters.takeIf { it > 0.0 }
+                    ),
                     showDivider = false
                 )
             }
@@ -516,7 +514,9 @@ private fun MountainRecords(
             RecordCard(
                 icon = Icons.Outlined.Route,
                 label = "Najdłuższa trasa",
-                value = formatDistance(state.longestActivityDistanceMeters),
+                value = TatraFormat.distance(
+                    state.longestActivityDistanceMeters.takeIf { it > 0.0 }
+                ),
                 helper = state.longestActivityName,
                 modifier = Modifier.weight(1f)
             )
@@ -524,10 +524,7 @@ private fun MountainRecords(
             RecordCard(
                 icon = Icons.Outlined.Landscape,
                 label = "Najwyższy punkt",
-                value =
-                    state.highestElevationMeters?.let {
-                        formatElevation(it)
-                    } ?: "—",
+                value = TatraFormat.elevation(state.highestElevationMeters?.takeIf { it > 0.0 }),
                 helper = state.highestActivityName,
                 modifier = Modifier.weight(1f)
             )
@@ -538,7 +535,9 @@ private fun MountainRecords(
         RecordCard(
             icon = Icons.Outlined.Timer,
             label = "Najdłuższa aktywność",
-            value = formatDuration(state.longestActivityDurationMillis),
+            value = TatraFormat.durationMillis(
+                state.longestActivityDurationMillis.takeIf { it > 0L }
+            ),
             helper = "Najdłuższy czas pojedynczego wyjścia",
             modifier = Modifier.fillMaxWidth()
         )
@@ -762,56 +761,5 @@ private fun StatisticsDetailRow(
                 color = TatraOutline.copy(alpha = 0.75f)
             )
         }
-    }
-}
-
-private fun formatDistance(
-    meters: Double
-): String {
-    if (meters <= 0.0) {
-        return "—"
-    }
-
-    return String.format(
-        Locale.getDefault(),
-        "%.1f km",
-        meters / 1000.0
-    )
-}
-
-private fun formatElevation(
-    meters: Double
-): String {
-    if (meters <= 0.0) {
-        return "—"
-    }
-
-    return String.format(
-        Locale.getDefault(),
-        "%.0f m",
-        meters
-    )
-}
-
-private fun formatDuration(
-    durationMillis: Long
-): String {
-    if (durationMillis <= 0L) {
-        return "—"
-    }
-
-    val totalMinutes = durationMillis / 1000 / 60
-    val hours = totalMinutes / 60
-    val minutes = totalMinutes % 60
-
-    return when {
-        hours <= 0L ->
-            "$minutes min"
-
-        minutes == 0L ->
-            "$hours h"
-
-        else ->
-            "$hours h $minutes min"
     }
 }

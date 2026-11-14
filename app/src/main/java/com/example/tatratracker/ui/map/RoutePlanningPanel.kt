@@ -40,9 +40,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.tatratracker.ui.format.TatraFormat
 import com.example.tatratracker.ui.theme.TatraDark
 import com.example.tatratracker.ui.theme.TatraGreen
-import java.util.Locale
 
 private val RouteEndColor =
     Color(
@@ -696,7 +696,7 @@ private fun ElevationSummary(
                         "Podejście",
 
                     value =
-                        "+${profile.totalAscentMeters} m"
+                        "+${TatraFormat.elevation(profile.totalAscentMeters)}"
                 )
 
                 ElevationStat(
@@ -704,7 +704,7 @@ private fun ElevationSummary(
                         "Zejście",
 
                     value =
-                        "-${profile.totalDescentMeters} m"
+                        "-${TatraFormat.elevation(profile.totalDescentMeters)}"
                 )
             }
 
@@ -725,7 +725,7 @@ private fun ElevationSummary(
                         "Najwyżej",
 
                     value =
-                        "${profile.highestElevationMeters} m"
+                        TatraFormat.elevation(profile.highestElevationMeters)
                 )
 
                 ElevationStat(
@@ -733,7 +733,7 @@ private fun ElevationSummary(
                         "Najniżej",
 
                     value =
-                        "${profile.lowestElevationMeters} m"
+                        TatraFormat.elevation(profile.lowestElevationMeters)
                 )
             }
 
@@ -768,13 +768,9 @@ private fun ElevationSummary(
 
                     Text(
                         text =
-                            String.format(
-                                Locale.US,
-                                "%.1f km  •  %.0f m n.p.m.",
-                                selectedSample.distanceMeters /
-                                        1000.0,
-                                selectedSample.elevationMeters
-                            ),
+                            TatraFormat.distance(selectedSample.distanceMeters) +
+                                "  •  " +
+                                TatraFormat.altitude(selectedSample.elevationMeters),
 
                         modifier =
                             Modifier.padding(
@@ -810,13 +806,10 @@ private fun ElevationSummary(
                     )
             )
 
-            val distanceKm =
+            val totalDistanceMeters =
                 profile.samples
                     .lastOrNull()
                     ?.distanceMeters
-                    ?.div(
-                        1000.0
-                    )
                     ?: 0.0
 
             Row(
@@ -842,11 +835,7 @@ private fun ElevationSummary(
 
                 Text(
                     text =
-                        String.format(
-                            Locale.US,
-                            "%.1f km",
-                            distanceKm
-                        ),
+                        TatraFormat.distance(totalDistanceMeters),
 
                     color =
                         Color(
@@ -1419,11 +1408,7 @@ private fun RouteSummary(
 
             Text(
                 text =
-                    String.format(
-                        Locale.US,
-                        "%.1f km",
-                        route.distanceKm
-                    ),
+                    TatraFormat.distance(route.distanceKm * 1000.0),
 
                 modifier =
                     Modifier.padding(
@@ -1443,9 +1428,7 @@ private fun RouteSummary(
             Text(
                 text =
                     "Szacowany czas: " +
-                            formatDuration(
-                                route.durationSeconds
-                            ),
+                            TatraFormat.duration(route.durationSeconds),
 
                 color =
                     Color(
@@ -1473,42 +1456,6 @@ private fun RouteSummary(
                         11.sp
                 )
             }
-        }
-    }
-}
-
-
-private fun formatDuration(
-    seconds: Int
-): String {
-
-    val totalMinutes =
-        seconds /
-                60
-
-    val hours =
-        totalMinutes /
-                60
-
-    val minutes =
-        totalMinutes %
-                60
-
-    return when {
-
-        hours <= 0 -> {
-
-            "$minutes min"
-        }
-
-        minutes == 0 -> {
-
-            "$hours h"
-        }
-
-        else -> {
-
-            "$hours h $minutes min"
         }
     }
 }
