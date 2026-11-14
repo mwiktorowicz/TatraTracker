@@ -21,7 +21,55 @@ Reguły dla wykonawcy:
 6. Nowy kod pisz w normalnym formatowaniu Kotlina (nie po jednym tokenie na linię, jak w istniejących plikach). Istniejących plików nie przeformatowuj bez osobnego zadania.
 7. Klucz `MAPTILER_API_KEY` jest w `local.properties` – nie wypisuj go i nie przenoś do repozytorium.
 
-## Aktualne zadanie: mapa – przebyte szlaki i moje punkty
+## Aktualne zadanie: ustawienia, które działają, i wspólny zapis liczb
+
+**Cel:** ekran Ustawień zawiera wyłącznie opcje, które naprawdę coś zmieniają i są zapamiętywane (punkt 1), a dystans, czas i wysokość są zapisywane tak samo na wszystkich ekranach (punkt 52). Dwie części, w podanej kolejności; po każdej projekt ma się budować.
+
+**Decyzje Miłosza (2026-11-14):** jednostek imperialnych nie wdrażamy – przełącznik znika (punkt 2 zamknięty). Stylów „Outdoor" i „Jasny podstawowy" nie będzie – wybór stylu znika z Ustawień; widok satelitarny to osobne, późniejsze zadanie (punkt 56).
+
+**Stan zastany:** `ui/SettingsScreen.kt` trzyma wszystko w `remember` i niczego nie zapisuje. W kodzie istnieje jeden styl mapy, jeden profil routingu (najkrótsza trasa piesza, `ui/map/RouteRoutingRepository.kt`), stała odległość próbkowania wysokości 100 m (`MIN_SAMPLE_DISTANCE_METERS` w `ui/map/RouteElevationRepository.kt`), a kamera po wyznaczeniu trasy dopasowuje się zawsze.
+
+### Część 1 – Ustawienia
+
+1. **Magazyn:** `data/AppSettingsStore` na DataStore Preferences (osobny plik, wzorem `MapLayerSettingsStore`), z czystą funkcją mapującą ustawienia ↔ klucze i testami JUnit. Ustawienia i wartości domyślne (domyślne = dzisiejsze zachowanie):
+   - `autoFitRoute`: Boolean, domyślnie `true`;
+   - `routingProfile`: `SHORTEST` (domyślnie) albo `STANDARD`;
+   - `elevationSampling`: 50, 100 (domyślnie) albo 200 m.
+   Nieznana lub uszkodzona wartość w pliku = wartość domyślna.
+2. **Ekran:** `SettingsScreen` ze stanem w ViewModelu. Zostaje jedna sekcja „Planowanie trasy" z trzema pozycjami:
+   - „Dopasuj kamerę po wyznaczeniu" – przełącznik;
+   - „Profil routingu" – wybór: „Najkrótsza trasa piesza" / „Standardowa trasa piesza", każda z jednozdaniowym opisem różnicy;
+   - „Próbkowanie wysokości" – wybór: „Około 50 m" / „Około 100 m" / „Około 200 m", z podpisem, że gęstsze próbkowanie daje dokładniejszy profil, ale wolniej się liczy.
+   Usuń: kartę „Podgląd ustawień", sekcję „Jednostki", „Styl mapy", „Etykiety szlaków", „Punkty POI", „Ustawienia zaawansowane" oraz plakietki „Podgląd". W miejscu sekcji mapy jeden wiersz informacyjny: „Warstwy mapy włączysz na mapie, przyciskiem Warstwy."
+3. **Podpięcie:**
+   - kamera: dopasowanie widoku do gotowej trasy tylko gdy `autoFitRoute` jest włączone (ustal, które z wywołań `newLatLngBounds` w `MapScreen.kt` dotyczy wyznaczenia trasy; dopasowania przy otwieraniu zapisanej trasy do edycji nie ruszaj);
+   - routing: `SHORTEST` = dokładnie dzisiejsze żądanie do Valhalli. `STANDARD` = to samo żądanie bez wymuszania najkrótszej drogi (`shortest`); pozostałe opcje kosztów bez zmian, chyba że komentarze w kodzie wskazują, że któraś z nich ma sens tylko razem z `shortest` – wtedy opisz to w Dzienniku;
+   - wysokość: odległość próbkowania z ustawienia zamiast stałej; limit `MAX_SAMPLES` i limity Open-Meteo zostają.
+   Ustawienia obowiązują też przy edycji zapisanej trasy. Zmiana ustawienia nie przelicza już wyznaczonej trasy – działa od następnego wyznaczenia.
+4. `ui/MoreScreen.kt`: usuń plakietkę „Podgląd" przy Ustawieniach; podpis wiersza: „Planowanie trasy i zachowanie mapy".
+
+### Część 2 – wspólny zapis liczb
+
+1. Jeden plik z czystymi funkcjami, np. `ui/format/TatraFormat.kt`, i testy JUnit do niego:
+   - dystans: poniżej 1000 m w metrach bez miejsc po przecinku („850 m"), od 1000 m w kilometrach z jednym miejscem („21,8 km"); wariant dokładny z dwoma miejscami („21,82 km") tylko dla głównej wartości w szczegółach aktywności i szczegółach zaplanowanej trasy;
+   - czas słownie: „45 min", „7 h", „7 h 50 min"; czas zegarowy („7:50:18") tylko tam, gdzie jest dziś;
+   - wysokość i przewyższenie: liczba całkowita + „m"; wysokość nad poziomem morza z „m n.p.m." tam, gdzie jest dziś;
+   - prędkość („4,2 km/h"), tempo („12:30 /km"), tętno („127 bpm");
+   - brak danych: wszędzie ten sam tekst „Brak danych";
+   - separator dziesiętny według ustawień regionalnych urządzenia.
+2. Zastąp prywatne kopie (`formatDuration`, `formatDistance`, `formatKilometers`, `formatElevation`, `formatAltitude`, `formatSpeed`, `formatPace`, `formatHeartRate`, `formatRouteDuration`, `formatPlannedDuration` i podobne) w ekranach i komponentach interfejsu wywołaniami wspólnych funkcji. Formatowania wewnątrz eksportu GPX (`export/`) i dat nie ruszaj.
+3. Jeśli któryś ekran celowo pokazuje wartość inaczej i ujednolicenie by coś zepsuło, zostaw go i wypisz w Dzienniku.
+
+**Poza zakresem:** widok satelitarny (56), jednostki imperialne, ekrany Kopia zapasowa / Eksport danych / Mapy offline, przeformatowanie starych plików, podział dużych plików.
+
+**Test na telefonie (Miłosz):**
+- Więcej → Ustawienia: są tylko trzy opcje planowania trasy i wiersz o warstwach; każda zmiana zostaje po wyjściu z ekranu i po restarcie aplikacji;
+- z wyłączonym „Dopasuj kamerę" wyznaczenie trasy na mapie nie przesuwa widoku; z włączonym – pokazuje całą trasę;
+- ta sama trasa wyznaczona na profilu najkrótszym i standardowym (profil standardowy może dać dłuższą, wygodniejszą drogę albo tę samą);
+- próbkowanie 50 m daje gęstszy profil wysokości niż 200 m;
+- ta sama wędrówka ma ten sam dystans w historii, statystykach i na karcie („21,8 km"), a w szczegółach dokładny („21,82 km").
+
+## Zakończone: mapa – przebyte szlaki i moje punkty
 
 **Cel:** dwie nowe warstwy na mapie głównej: szlaki, które Miłosz już przeszedł (punkt 9), oraz jego zapisane miejsca (rozbieżność 1 z poprzedniego zadania). Obie z przełącznikiem w panelu „Warstwy", zapamiętywanym jak pozostałe.
 
@@ -287,11 +335,13 @@ Opis zadania:
 
 55. `TrackPoint.ele` jako `Double?`: brak wysokości zapisywany jako `null` zamiast 0.0 (import FIT/TCX, Samsung Health, wykresy, statystyki). Stare wiersze z 0.0 wymagają osobnej decyzji.
 
+56. Widok satelitarny jako drugi styl mapy (zdjęcia + nasze warstwy szlaków, punktów i śladów), z przełącznikiem stylu na mapie. Najpierw sprawdzić, czy klucz MapTiler Miłosza daje dostęp do kafli satelitarnych i jakie są limity.
+
 ## Proponowana kolejność
 
 1. Test Samsung Health i synchronizacja z Samsung Health (zrobione, 24).
 2. Porządki na mapie: 45–48 (zrobione).
-3. Etap „bez martwych przycisków": część 1 – 6, 7, 8, 10 (zrobione); 9 + warstwa „Moje punkty" (trwa); potem 1, 2, 14.
+3. Etap „bez martwych przycisków": 6, 7, 8, 9, 10 + warstwa „Moje punkty" (zrobione); 1 + 52 (trwa); 2 zamknięty decyzją (bez jednostek imperialnych); potem 56 (widok satelitarny) i 14.
 4. Makiety wyglądu (34), potem 23, 27, 29, 30.
 5. Kopia, eksport, mapy offline: 3–5.
 6. Nagrywanie na żywo: 12, 13, 16.
@@ -321,3 +371,4 @@ Opis zadania:
 - 2026-11-14 – mapa: przebyte szlaki i moje punkty (kod). Decyzje Miłosza przy planie: poświata najniżej z naszych warstw; moje punkty nad śladem GPS, pod planowaną trasą i jej znacznikami (komentarz o kolejności w `addTatraMapLayers` poprawiony); po błędzie ponowne włączenie przełącznika woła `TrailProgressRepository.recalculate()`, przy poprawnym wyniku nie. (1) „Przebyte szlaki”: `ui/map/MapWalkedTrailsLayer.kt` – źródło GeoJSON z `matchedGeoJson`, linia `TatraGreen`, krycie 0,45, lekkie rozmycie, szerokość rosnąca z przybliżeniem (ok. 5 px przy zoomie 10, 6 px przy 13, 11 px przy 16; linia szlaku ma stałe 1,9 px), od zoomu 8,5 jak szlaki. `MapViewModel.walkedTrails` sięga po repozytorium (leniwie) dopiero, gdy warstwa jest włączona. W panelu wiersz w sekcji *Mapa* z podpisem, wskaźnikiem w trakcie liczenia i czerwonym „Nie udało się policzyć przebytych odcinków.” przy błędzie (na mapie zostaje poprzedni wynik, jeśli był); sekcja „Ukończone szlaki” i `ComingSoonRow` usunięte. (2) „Moje punkty”: `ui/map/MapSavedPlacesLayer.kt` – biały krążek z obwódką `TatraGreenDark`, na nim ikona wg kategorii (`HUT` – schronisko, `MOUNTAIN` – szczyt, `OTHER` – nowa `ic_map_pin.xml`), pod nim nazwa; dane z `SavedPlaceRepository.observePlaces()` (`SavedPlaceDao.getAllPlaces()`) przez `MapViewModel.savedPlaces`. Przełącznik na końcu sekcji *Punkty*. (3) `MapLayerSettings.walkedTrails` (domyślnie wyłączone) i `savedPlaces` (domyślnie włączone), klucze `walked_trails` i `saved_places`. Testy JUnit: 2 nowe i uzupełnione istniejące w `MapLayerSettingsStoreTest` (w tym stare ustawienia bez nowych kluczy); `assembleDebug` i `testDebugUnitTest` przechodzą (54 testy).
   - Ustalenia wykonawcy (do ewentualnej korekty): ponowna próba po błędzie rusza też przy otwarciu mapy z warstwą zapisaną jako włączona (to także „włączenie”); przy ponownej próbie stary komunikat błędu może mignąć, zanim pojawi się wskaźnik. Po wyłączeniu warstwy źródło jest czyszczone, a po ponownym włączeniu gotowy wynik wraca od razu; repozytorium raz uruchomione dalej przelicza wynik po imporcie lub usunięciu aktywności (jak dotąd przy Statystykach). Moje punkty są widoczne przy każdym przybliżeniu, ikony i nazwy mogą na siebie nachodzić (tak jak schroniska), żeby ikona nie rozjechała się z krążkiem. Poświata jest widoczna także przy wyłączonej warstwie „Szlaki”.
   - Nie testowane na telefonie: wszystko z sekcji „Test na telefonie” zadania, w szczególności wygląd poświaty (szerokość, krycie, czytelność koloru szlaku) i krążka z ikoną, czas liczenia przy włączeniu oraz zachowanie przy błędzie.
+- 2026-11-14 – warstwy „Przebyte szlaki" i „Moje punkty" przetestowane na telefonie przez Miłosza: działa; zmiany na `main`. Decyzje: bez jednostek imperialnych, bez stylów Outdoor/Jasny, widok satelitarny jako punkt 56. Dopisano zadanie „ustawienia, które działają, i wspólny zapis liczb".
