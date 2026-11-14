@@ -21,7 +21,46 @@ Reguły dla wykonawcy:
 6. Nowy kod pisz w normalnym formatowaniu Kotlina (nie po jednym tokenie na linię, jak w istniejących plikach). Istniejących plików nie przeformatowuj bez osobnego zadania.
 7. Klucz `MAPTILER_API_KEY` jest w `local.properties` – nie wypisuj go i nie przenoś do repozytorium.
 
-## Aktualne zadanie: porządki na mapie
+## Aktualne zadanie: koniec martwych przycisków (część 1)
+
+**Cel:** przyciski, które dziś otwierają okienko „podepniemy później", zaczynają działać, a opisy w aplikacji przestają mówić o rzeczach już zrobionych. Punkty 6, 7, 8, 10 z listy. Wykonuj podpunkty w podanej kolejności; po każdym projekt ma się budować.
+
+**1. Edycja aktywności (punkt 6)** – `ui/ActivityDetailsScreen.kt`, przycisk „Edytuj aktywność".
+- Edytowalne: nazwa i notatka. Daty i danych z GPS nie edytujemy.
+- Notatka to nowa kolumna `note` (TEXT, nullable) w `ActivityEntity`; migracja Room 9 → 10 samym `ALTER TABLE`, schemat `10.json`, bez `fallbackToDestructiveMigration`.
+- Okno edycji: pole nazwy (niepuste, przycinane), pole notatki (wielowierszowe, opcjonalne), „Zapisz" i „Anuluj". Zapis przez ViewModel, nie z poziomu composable.
+- Notatka widoczna w szczegółach aktywności, gdy jest niepusta.
+- Synchronizacja z Samsung Health nie może nadpisywać nazwy ani notatki (dziś pomija istniejące aktywności – upewnij się, że tak zostaje).
+
+**2. Eksport GPX pojedynczej aktywności (punkt 7)** – przycisk „Eksportuj GPX" w szczegółach aktywności.
+- GPX 1.1 z jednym śladem (`trk`/`trkseg`/`trkpt`): pozycja, `ele` gdy jest, `time` (UTC, ISO 8601) gdy jest, tętno w rozszerzeniu `gpxtpx:TrackPointExtension` (`gpxtpx:hr`) gdy jest. Nazwa aktywności w `metadata` i `trk`.
+- Wybór miejsca zapisu systemowym oknem „Utwórz dokument", tak jak robi to eksport zaplanowanej trasy w `ui/PlannedRouteDetailsScreen.kt`; proponowana nazwa pliku z nazwy i daty aktywności.
+- Budowanie XML jako czysta funkcja (np. `export/ActivityGpxExporter`), ze wspólnym z `PlannedRouteGpxExporter` kodem do escapowania i nagłówka zamiast kopii. Testy JUnit: znaki specjalne w nazwie, punkty bez wysokości/czasu/tętna, pusty ślad (czytelny błąd zamiast pustego pliku).
+- Komunikat po zapisie i przy błędzie.
+
+**3. Zapis własnego punktu z mapy (punkt 8)** – `AddOwnPlaceDialog` w `ui/MapScreen.kt` kończy się dziś komunikatem „gotowy do podłączenia do warstwy danych".
+- Zapisz punkt w tabeli `saved_places` (kategoria `OTHER`) w środku aktualnego widoku mapy, używając tej samej logiki co `SavedPlacesViewModel.savePlace` (wydziel wspólny kod, nie kopiuj).
+- Po zapisie komunikat „„nazwa" zapisano w Schroniska i punkty".
+- Popraw tekst w oknie dialogowym, który mówi „Docelowo punkt zostanie zapisany…", na opis stanu faktycznego.
+- **Sprawdź, czy mapa główna pokazuje zapisane miejsca.** Jeśli nie, nie dobudowuj warstwy samodzielnie: zgłoś to jako rozbieżność (zasada 5) z krótką propozycją, a pozostałe podpunkty rób dalej.
+
+**4. Realny postęp w Statystykach i opisy (punkt 10)**
+- `ui/StatisticsScreen.kt`, karta „Postęp w Tatrach": zamiast tekstu „Procent pojawi się po spięciu track matchingu…" pokaż procent przebytej sieci szlaków i liczbę ukończonych szlaków – te same wartości co ekran „Ukończone szlaki".
+- Dopasowanie nie może liczyć się dwa razy: wydziel wspólne źródło wyniku (np. repozytorium z wynikiem trzymanym w pamięci procesu), z którego korzystają `CompletedTrailsViewModel` i Statystyki. W trakcie liczenia Statystyki pokazują „Liczę postęp…", przy błędzie – krótki komunikat; reszta ekranu działa niezależnie. Zapis wyniku w bazie to punkt 38, poza zakresem.
+- `ui/MoreScreen.kt`: usuń plakietki „Gotowy ekran" i „Matching później"; „Backend później" zamień na „Wkrótce"; „Podgląd" przy Ustawieniach zostaje.
+- Przejrzyj pozostałe teksty widoczne dla użytkownika pod kątem słów „później", „docelowo", „podepniemy", „etap" i popraw te, które opisują rzeczy już działające. Ekranów Kopia zapasowa, Eksport danych, Mapy offline i Ustawienia nie zmieniaj – to osobne zadania.
+
+**Poza zakresem:** warstwa ukończonych szlaków na mapie (punkt 9 – następne zadanie), ustawienia i jednostki (1, 2), import aktywności z GPX (14), przycisk „Rozpocznij" (11), zmiany wyglądu.
+
+**Test na telefonie (Miłosz):**
+- aplikacja uruchamia się po aktualizacji i stare aktywności są na miejscu (migracja);
+- zmiana nazwy i dodanie notatki do aktywności zostają po wyjściu i powrocie oraz po ponownej synchronizacji z Samsung Health;
+- eksport GPX aktywności tworzy plik, który da się z powrotem otworzyć (np. import w Stravie albo podgląd w innej aplikacji);
+- własny punkt dodany na mapie pojawia się w Więcej → Schroniska i punkty;
+- Statystyki pokazują ten sam procent co ekran „Ukończone szlaki";
+- w zakładce Więcej nie ma plakietek „Gotowy ekran" i „Matching później".
+
+## Zakończone: porządki na mapie
 
 **Cel:** jeden przycisk i jeden panel warstw zamiast trzech dublujących się, ikony zgodne z działaniem, zapamiętywanie ustawień warstw. Przy okazji usunięcie ekranu testowego Samsung Health. Punkty 45–48 z listy.
 
@@ -220,8 +259,8 @@ Reguły dla wykonawcy:
 ## Proponowana kolejność
 
 1. Test Samsung Health i synchronizacja z Samsung Health (zrobione, 24).
-2. Porządki na mapie: 45–48 (trwa).
-3. Etap „bez martwych przycisków": 1, 2, 6–10, 14.
+2. Porządki na mapie: 45–48 (zrobione).
+3. Etap „bez martwych przycisków": część 1 – 6, 7, 8, 10 (trwa); potem 9; potem 1, 2, 14.
 4. Makiety wyglądu (34), potem 23, 27, 29, 30.
 5. Kopia, eksport, mapy offline: 3–5.
 6. Nagrywanie na żywo: 12, 13, 16.
@@ -240,3 +279,4 @@ Reguły dla wykonawcy:
 - 2026-11-14 – porządki na mapie (kod). Mapa: jeden przycisk „Warstwy" i jeden panel `MapLayersPanel` (sekcje Mapa / Punkty / „Ukończone szlaki" z plakietką „Wkrótce", nieaktywne / Akcje; przewijany), usunięte `MapPoiTools.kt` i `MapTrailTools.kt`, `AddOwnPlaceDialog` w osobnym pliku, ikony `Route` („Planowanie trasy") i `Landscape` („Pokaż całe Tatry"). Zapamiętywanie warstw: DataStore Preferences 1.2.1, `data/MapLayerSettingsStore.kt` (plik `map_layer_settings`), stan w `MapViewModel` (`layerSettings`, `updateLayerSettings`). Import GPX na mapie (decyzja A): `PlannedRoutesViewModel.importGpxRoute()` zwraca `GpxRouteImportOutcome` i jest używany przez mapę oraz „Moje trasy" (treść komunikatów w „Moich trasach" bez zmian); na mapie komunikat „„nazwa" została zapisana w Moich trasach." albo błąd, w trakcie importu wskaźnik ładowania. Usunięty ekran testowy Samsung Health (`SamsungHealthTestScreen.kt`, trasa w `Screen.kt`, wpisy w `MainActivity.kt`, sekcja „Eksperymenty" w `MoreScreen.kt`). Testy JUnit: 6 nowych (`MapLayerSettingsStoreTest`); `assembleDebug` i `testDebugUnitTest` przechodzą (44 testy).
   - Ustalenia wykonawcy (do ewentualnej korekty): DataStore 1.2.1 zamiast najnowszej 1.3.0 – 1.3.0 wymaga `kotlin-stdlib` 2.2.20, nowszej niż Kotlin wbudowany w AGP (2.2.10); 1.2.1 nie podbija żadnej zależności (coroutines 1.9.0 już były w projekcie). Ustawienia wczytywane raz przy otwarciu mapy; jeśli użytkownik przełączy warstwę przed końcem odczytu, wygrywa jego wybór. Zanim przyjdą zapisane ustawienia, przez ułamek sekundy mogą obowiązywać domyślne (w praktyce odczyt DataStore kończy się przed wczytaniem stylu mapy z sieci). `MapLayerSettingsStore` w pakiecie `data` zależy od `ui.map.MapLayerSettings` – przeniesienie klasy poza zakresem. Kliknięcie akcji w panelu zamyka panel. „Dodaj własny punkt" nadal kończy się komunikatem „gotowy do podłączenia" (punkt 8).
   - Nie testowane na telefonie: wszystko z sekcji „Test na telefonie" zadania, w szczególności pamięć warstw po restarcie aplikacji i import GPX z mapy (poprawny i błędny plik).
+- 2026-11-14 – porządki na mapie przetestowane na telefonie przez Miłosza: działa; zmiany na `main`. Dopisano zadanie „koniec martwych przycisków (część 1)".
