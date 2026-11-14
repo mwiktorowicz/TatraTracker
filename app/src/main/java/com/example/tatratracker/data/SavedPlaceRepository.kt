@@ -1,6 +1,7 @@
 package com.example.tatratracker.data
 
 import androidx.room.withTransaction
+import kotlinx.coroutines.flow.Flow
 
 /**
  * Zapis miejsc w tabeli `saved_places` – wspólny dla ekranu „Schroniska i punkty”
@@ -11,6 +12,9 @@ class SavedPlaceRepository(
 ) {
 
     private val savedPlaceDao = database.savedPlaceDao()
+
+    /** Wszystkie zapisane miejsca; emituje ponownie po każdym dodaniu i usunięciu. */
+    fun observePlaces(): Flow<List<SavedPlaceEntity>> = savedPlaceDao.getAllPlaces()
 
     /**
      * Zapisuje miejsce razem z ręczną wizytą (źródło MANUAL).

@@ -41,6 +41,8 @@ internal object MapLayerSettingsKeys {
     val CAVES = booleanPreferencesKey("caves")
     val WATER = booleanPreferencesKey("water")
     val GPS_TRACKS = booleanPreferencesKey("gps_tracks")
+    val WALKED_TRAILS = booleanPreferencesKey("walked_trails")
+    val SAVED_PLACES = booleanPreferencesKey("saved_places")
 }
 
 /**
@@ -55,7 +57,9 @@ internal fun Preferences.toMapLayerSettings(): MapLayerSettings {
         huts = this[MapLayerSettingsKeys.HUTS] ?: defaults.huts,
         caves = this[MapLayerSettingsKeys.CAVES] ?: defaults.caves,
         water = this[MapLayerSettingsKeys.WATER] ?: defaults.water,
-        gpsTracks = this[MapLayerSettingsKeys.GPS_TRACKS] ?: defaults.gpsTracks
+        gpsTracks = this[MapLayerSettingsKeys.GPS_TRACKS] ?: defaults.gpsTracks,
+        walkedTrails = this[MapLayerSettingsKeys.WALKED_TRAILS] ?: defaults.walkedTrails,
+        savedPlaces = this[MapLayerSettingsKeys.SAVED_PLACES] ?: defaults.savedPlaces
     )
 }
 
@@ -67,4 +71,6 @@ internal fun MutablePreferences.writeMapLayerSettings(settings: MapLayerSettings
     this[MapLayerSettingsKeys.CAVES] = settings.caves
     this[MapLayerSettingsKeys.WATER] = settings.water
     this[MapLayerSettingsKeys.GPS_TRACKS] = settings.gpsTracks
+    this[MapLayerSettingsKeys.WALKED_TRAILS] = settings.walkedTrails
+    this[MapLayerSettingsKeys.SAVED_PLACES] = settings.savedPlaces
 }

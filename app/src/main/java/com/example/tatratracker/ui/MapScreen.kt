@@ -70,7 +70,9 @@ import com.example.tatratracker.ui.map.updateElevationMarker
 import com.example.tatratracker.ui.map.updatePlannedRoute
 import com.example.tatratracker.ui.map.updateQuery
 import com.example.tatratracker.ui.map.updateRouteSelection
+import com.example.tatratracker.ui.map.updateSavedPlaces
 import com.example.tatratracker.ui.map.updateUserTracks
+import com.example.tatratracker.ui.map.updateWalkedTrails
 import com.example.tatratracker.ui.theme.TatraDark
 import com.example.tatratracker.ui.theme.TatraGreen
 import com.example.tatratracker.viewmodel.GpxRouteImportOutcome
@@ -166,6 +168,10 @@ fun MapScreen(
 
     // Zapamiętane w DataStore – patrz MapViewModel.updateLayerSettings.
     val layerSettings by mapViewModel.layerSettings.collectAsState()
+
+    // Warstwy „Przebyte szlaki” i „Moje punkty”.
+    val walkedTrails by mapViewModel.walkedTrails.collectAsState()
+    val savedPlaces by mapViewModel.savedPlaces.collectAsState()
 
     var isImportingGpx by remember { mutableStateOf(false) }
 
@@ -774,6 +780,16 @@ fun MapScreen(
             tracks =
                 tracks
         )
+    }
+
+    LaunchedEffect(walkedTrails.geoJson, loadedStyle) {
+        val style = loadedStyle ?: return@LaunchedEffect
+        updateWalkedTrails(style, walkedTrails.geoJson)
+    }
+
+    LaunchedEffect(savedPlaces, loadedStyle) {
+        val style = loadedStyle ?: return@LaunchedEffect
+        updateSavedPlaces(style, savedPlaces)
     }
 
     LaunchedEffect(
@@ -1548,6 +1564,8 @@ fun MapScreen(
                     .padding(top = 66.dp, end = 70.dp, bottom = 16.dp),
                 settings = layerSettings,
                 onSettingsChange = mapViewModel::updateLayerSettings,
+                walkedTrailsLoading = walkedTrails.isLoading,
+                walkedTrailsError = walkedTrails.hasError,
                 onAddOwnPlace = {
                     showLayersPanel = false
                     showAddOwnPlaceDialog = true

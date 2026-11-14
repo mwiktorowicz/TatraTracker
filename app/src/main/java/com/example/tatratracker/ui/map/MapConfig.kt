@@ -23,6 +23,10 @@ internal const val PLANET_SOURCE_ID =
 internal const val TRACK_SOURCE_ID =
     "user-tracks-source"
 
+internal const val WALKED_TRAILS_SOURCE_ID = "tt-walked-trails-source"
+
+internal const val SAVED_PLACES_SOURCE_ID = "tt-saved-places-source"
+
 /*
  * =========================================================
  * WARSTWY
@@ -67,6 +71,12 @@ internal const val WATER_LABEL_LAYER_ID =
 
 internal const val TRACK_LAYER_ID =
     "user-tracks-layer"
+
+internal const val WALKED_TRAILS_LAYER_ID = "tt-walked-trails-glow"
+
+internal const val SAVED_PLACE_BADGE_LAYER_ID = "tt-saved-place-badges"
+
+internal const val SAVED_PLACE_SYMBOL_LAYER_ID = "tt-saved-place-symbols"
 
 /*
  * =========================================================

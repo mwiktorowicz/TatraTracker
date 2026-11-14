@@ -32,6 +32,9 @@ internal fun addTatraMapLayers(
         style = style
     )
 
+    // Przebyte szlaki: najniżej z naszych warstw, tuż nad podkładem mapy.
+    addWalkedTrailsLayer(style)
+
     /*
      * Planet:
      * - schroniska
@@ -80,13 +83,18 @@ internal fun addTatraMapLayers(
     )
 
     /*
-     * GPS użytkownika zawsze
-     * najwyżej.
+     * GPS użytkownika nad szlakami
+     * i punktami mapy.
      */
     addUserTrackLayer(
         style = style,
         tracks = tracks
     )
+
+    // Moje punkty nad śladem GPS: zapisane schroniska i szczyty leżą zwykle na trasie,
+    // więc linia śladu przechodziłaby przez ikonę. Planowana trasa i jej znaczniki
+    // są dodawane po tej funkcji, więc zostają nad nimi.
+    addSavedPlacesLayers(style)
 }
 
 

@@ -23,7 +23,12 @@ data class MapLayerSettings(
 
     val water: Boolean = true,
 
-    val gpsTracks: Boolean = true
+    val gpsTracks: Boolean = true,
+
+    // Dopasowanie śladów do szlaków jest kosztowne – domyślnie wyłączone.
+    val walkedTrails: Boolean = false,
+
+    val savedPlaces: Boolean = true
 )
 
 
@@ -133,6 +138,20 @@ internal fun applyMapLayerVisibility(
             ),
         visible =
             settings.gpsTracks
+    )
+
+    // PRZEBYTE SZLAKI
+    setLayersVisible(
+        style = style,
+        layerIds = listOf(WALKED_TRAILS_LAYER_ID),
+        visible = settings.walkedTrails
+    )
+
+    // MOJE PUNKTY
+    setLayersVisible(
+        style = style,
+        layerIds = listOf(SAVED_PLACE_BADGE_LAYER_ID, SAVED_PLACE_SYMBOL_LAYER_ID),
+        visible = settings.savedPlaces
     )
 }
 

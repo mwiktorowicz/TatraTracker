@@ -17,6 +17,8 @@ internal const val CAVE_ICON_ID =
 internal const val WATER_ICON_ID =
     "tt-water-icon"
 
+internal const val PIN_ICON_ID = "tt-pin-icon"
+
 
 internal fun registerMapIcons(
     context: Context,
@@ -49,6 +51,13 @@ internal fun registerMapIcons(
         style = style,
         imageId = WATER_ICON_ID,
         drawableId = R.drawable.ic_map_water
+    )
+
+    addDrawableToStyle(
+        context = context,
+        style = style,
+        imageId = PIN_ICON_ID,
+        drawableId = R.drawable.ic_map_pin
     )
 }
 

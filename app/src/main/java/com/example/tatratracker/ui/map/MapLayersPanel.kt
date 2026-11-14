@@ -16,6 +16,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AddLocationAlt
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.FileOpen
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -30,8 +31,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.tatratracker.ui.components.TatraBadgeStyle
-import com.example.tatratracker.ui.components.TatraStatusBadge
+import com.example.tatratracker.ui.theme.TatraDanger
 import com.example.tatratracker.ui.theme.TatraDark
 import com.example.tatratracker.ui.theme.TatraTextMuted
 
@@ -43,6 +43,8 @@ import com.example.tatratracker.ui.theme.TatraTextMuted
 internal fun MapLayersPanel(
     settings: MapLayerSettings,
     onSettingsChange: (MapLayerSettings) -> Unit,
+    walkedTrailsLoading: Boolean,
+    walkedTrailsError: Boolean,
     onAddOwnPlace: () -> Unit,
     onImportGpx: () -> Unit,
     onClose: () -> Unit,
@@ -83,6 +85,19 @@ internal fun MapLayersPanel(
                     checked = settings.gpsTracks,
                     onCheckedChange = { onSettingsChange(settings.copy(gpsTracks = it)) }
                 )
+                // Przy błędzie przełącznik zostaje włączony; ponowne włączenie ponawia liczenie.
+                LayerSwitchRow(
+                    title = "Przebyte szlaki",
+                    subtitle = if (walkedTrailsError) {
+                        "Nie udało się policzyć przebytych odcinków."
+                    } else {
+                        "Odcinki, które masz już za sobą"
+                    },
+                    subtitleIsError = walkedTrailsError,
+                    showProgress = walkedTrailsLoading,
+                    checked = settings.walkedTrails,
+                    onCheckedChange = { onSettingsChange(settings.copy(walkedTrails = it)) }
+                )
 
                 SectionDivider()
                 SectionTitle("Punkty")
@@ -107,11 +122,12 @@ internal fun MapLayersPanel(
                     checked = settings.water,
                     onCheckedChange = { onSettingsChange(settings.copy(water = it)) }
                 )
-
-                SectionDivider()
-
-                // Warstwa jeszcze nie istnieje (punkt 9 planu) – wiersz celowo nieaktywny.
-                ComingSoonRow(title = "Ukończone szlaki")
+                LayerSwitchRow(
+                    title = "Moje punkty",
+                    subtitle = "Zapisane miejsca i własne punkty",
+                    checked = settings.savedPlaces,
+                    onCheckedChange = { onSettingsChange(settings.copy(savedPlaces = it)) }
+                )
 
                 SectionDivider()
                 SectionTitle("Akcje")
@@ -180,7 +196,10 @@ private fun SectionDivider() {
 private fun LayerSwitchRow(
     title: String,
     checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit
+    onCheckedChange: (Boolean) -> Unit,
+    subtitle: String? = null,
+    subtitleIsError: Boolean = false,
+    showProgress: Boolean = false
 ) {
     Row(
         modifier = Modifier
@@ -188,42 +207,36 @@ private fun LayerSwitchRow(
             .padding(start = 18.dp, end = 10.dp, top = 4.dp, bottom = 4.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(
-            text = title,
-            modifier = Modifier.weight(1f),
-            color = TatraDark,
-            fontSize = 14.sp
-        )
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                color = TatraDark,
+                fontSize = 14.sp
+            )
+
+            if (subtitle != null) {
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = subtitle,
+                    color = if (subtitleIsError) TatraDanger else TatraTextMuted,
+                    fontSize = 12.sp
+                )
+            }
+        }
+
+        if (showProgress) {
+            Spacer(modifier = Modifier.width(8.dp))
+            CircularProgressIndicator(
+                modifier = Modifier.size(16.dp),
+                strokeWidth = 2.dp
+            )
+        }
 
         Spacer(modifier = Modifier.width(8.dp))
 
         Switch(
             checked = checked,
             onCheckedChange = onCheckedChange
-        )
-    }
-}
-
-@Composable
-private fun ComingSoonRow(title: String) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(start = 18.dp, end = 14.dp, top = 12.dp, bottom = 6.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(
-            text = title,
-            modifier = Modifier.weight(1f),
-            color = TatraTextMuted,
-            fontSize = 14.sp
-        )
-
-        Spacer(modifier = Modifier.width(8.dp))
-
-        TatraStatusBadge(
-            text = "Wkrótce",
-            style = TatraBadgeStyle.Info
         )
     }
 }
