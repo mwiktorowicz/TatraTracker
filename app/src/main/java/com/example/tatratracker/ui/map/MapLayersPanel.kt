@@ -1,6 +1,8 @@
 package com.example.tatratracker.ui.map
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -10,12 +12,16 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AddLocationAlt
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.FileOpen
+import androidx.compose.material.icons.outlined.SatelliteAlt
+import androidx.compose.material.icons.outlined.Terrain
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -28,15 +34,20 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.tatratracker.ui.theme.TatraDanger
 import com.example.tatratracker.ui.theme.TatraDark
+import com.example.tatratracker.ui.theme.TatraGreen
+import com.example.tatratracker.ui.theme.TatraGreenDark
+import com.example.tatratracker.ui.theme.TatraGreenVerySoft
+import com.example.tatratracker.ui.theme.TatraOutline
 import com.example.tatratracker.ui.theme.TatraTextMuted
 
 /**
- * Jedyny panel warstw mapy: przełączniki warstw i akcje.
+ * Jedyny panel warstw mapy: wybór podkładu, przełączniki warstw i akcje.
  * Każdy przełącznik występuje tu dokładnie raz.
  */
 @Composable
@@ -68,6 +79,32 @@ internal fun MapLayersPanel(
                     .verticalScroll(rememberScrollState())
                     .padding(bottom = 8.dp)
             ) {
+                SectionTitle("Podkład")
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .selectableGroup()
+                        .padding(start = 16.dp, end = 16.dp, top = 6.dp, bottom = 2.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    BasemapOption(
+                        title = "Teren",
+                        icon = Icons.Outlined.Terrain,
+                        selected = settings.basemap == MapBasemap.TERRAIN,
+                        onClick = { onSettingsChange(settings.copy(basemap = MapBasemap.TERRAIN)) },
+                        modifier = Modifier.weight(1f)
+                    )
+                    BasemapOption(
+                        title = "Satelita",
+                        icon = Icons.Outlined.SatelliteAlt,
+                        selected = settings.basemap == MapBasemap.SATELLITE,
+                        onClick = { onSettingsChange(settings.copy(basemap = MapBasemap.SATELLITE)) },
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+
+                SectionDivider()
                 SectionTitle("Mapa")
 
                 LayerSwitchRow(
@@ -190,6 +227,51 @@ private fun SectionDivider() {
     HorizontalDivider(
         modifier = Modifier.padding(start = 16.dp, top = 6.dp, end = 16.dp)
     )
+}
+
+@Composable
+private fun BasemapOption(
+    title: String,
+    icon: ImageVector,
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        modifier = modifier.selectable(
+            selected = selected,
+            role = Role.RadioButton,
+            onClick = onClick
+        ),
+        shape = RoundedCornerShape(12.dp),
+        color = if (selected) TatraGreenVerySoft else Color.White,
+        border = if (selected) {
+            BorderStroke(2.dp, TatraGreen)
+        } else {
+            BorderStroke(1.dp, TatraOutline)
+        }
+    ) {
+        Column(
+            modifier = Modifier.padding(vertical = 10.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                modifier = Modifier.size(22.dp),
+                tint = if (selected) TatraGreenDark else TatraDark
+            )
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            Text(
+                text = title,
+                color = TatraDark,
+                fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+                fontSize = 13.sp
+            )
+        }
+    }
 }
 
 @Composable

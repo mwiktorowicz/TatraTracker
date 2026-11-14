@@ -6,7 +6,9 @@ import androidx.datastore.preferences.core.MutablePreferences
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import com.example.tatratracker.ui.map.MapBasemap
 import com.example.tatratracker.ui.map.MapLayerSettings
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -43,10 +45,12 @@ internal object MapLayerSettingsKeys {
     val GPS_TRACKS = booleanPreferencesKey("gps_tracks")
     val WALKED_TRAILS = booleanPreferencesKey("walked_trails")
     val SAVED_PLACES = booleanPreferencesKey("saved_places")
+    val BASEMAP = stringPreferencesKey("basemap")
 }
 
 /**
  * Brakujący klucz (np. pierwsze uruchomienie) = wartość domyślna z [MapLayerSettings].
+ * Nieznany podkład albo wartość złego typu = podkład domyślny.
  */
 internal fun Preferences.toMapLayerSettings(): MapLayerSettings {
     val defaults = MapLayerSettings()
@@ -59,8 +63,14 @@ internal fun Preferences.toMapLayerSettings(): MapLayerSettings {
         water = this[MapLayerSettingsKeys.WATER] ?: defaults.water,
         gpsTracks = this[MapLayerSettingsKeys.GPS_TRACKS] ?: defaults.gpsTracks,
         walkedTrails = this[MapLayerSettingsKeys.WALKED_TRAILS] ?: defaults.walkedTrails,
-        savedPlaces = this[MapLayerSettingsKeys.SAVED_PLACES] ?: defaults.savedPlaces
+        savedPlaces = this[MapLayerSettingsKeys.SAVED_PLACES] ?: defaults.savedPlaces,
+        basemap = readBasemap() ?: defaults.basemap
     )
+}
+
+private fun Preferences.readBasemap(): MapBasemap? {
+    val name = asMap()[MapLayerSettingsKeys.BASEMAP] as? String ?: return null
+    return MapBasemap.entries.firstOrNull { it.name == name }
 }
 
 internal fun MutablePreferences.writeMapLayerSettings(settings: MapLayerSettings) {
@@ -73,4 +83,5 @@ internal fun MutablePreferences.writeMapLayerSettings(settings: MapLayerSettings
     this[MapLayerSettingsKeys.GPS_TRACKS] = settings.gpsTracks
     this[MapLayerSettingsKeys.WALKED_TRAILS] = settings.walkedTrails
     this[MapLayerSettingsKeys.SAVED_PLACES] = settings.savedPlaces
+    this[MapLayerSettingsKeys.BASEMAP] = settings.basemap.name
 }

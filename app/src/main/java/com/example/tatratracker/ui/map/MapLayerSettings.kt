@@ -28,7 +28,10 @@ data class MapLayerSettings(
     // Dopasowanie śladów do szlaków jest kosztowne – domyślnie wyłączone.
     val walkedTrails: Boolean = false,
 
-    val savedPlaces: Boolean = true
+    val savedPlaces: Boolean = true,
+
+    // Podkład mapy głównej – patrz MapBasemap.kt.
+    val basemap: MapBasemap = MapBasemap.TERRAIN
 )
 
 

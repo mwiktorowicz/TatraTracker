@@ -106,6 +106,13 @@ internal fun landscapeStyleUrl(
 }
 
 
+// Zdjęcia satelitarne z etykietami („Satellite Hybrid” MapTilera). Wersja v4 korzysta
+// z tych samych kafli wektorowych (tiles/v4) co landscape-v4 i nasze punkty.
+internal fun satelliteStyleUrl(apiKey: String): String {
+    return "https://api.maptiler.com/maps/hybrid-v4/style.json?key=$apiKey"
+}
+
+
 internal fun outdoorTilesUrl(
     apiKey: String
 ): String {

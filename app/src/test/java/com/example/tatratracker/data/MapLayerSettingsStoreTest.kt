@@ -1,7 +1,9 @@
 package com.example.tatratracker.data
 
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.mutablePreferencesOf
+import com.example.tatratracker.ui.map.MapBasemap
 import com.example.tatratracker.ui.map.MapLayerSettings
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -52,7 +54,8 @@ class MapLayerSettingsStoreTest {
             MapLayerSettings(water = false),
             MapLayerSettings(gpsTracks = false),
             MapLayerSettings(walkedTrails = true),
-            MapLayerSettings(savedPlaces = false)
+            MapLayerSettings(savedPlaces = false),
+            MapLayerSettings(basemap = MapBasemap.SATELLITE)
         )
 
         variants.forEach { settings ->
@@ -117,9 +120,76 @@ class MapLayerSettingsStoreTest {
             MapLayerSettingsKeys.WATER,
             MapLayerSettingsKeys.GPS_TRACKS,
             MapLayerSettingsKeys.WALKED_TRAILS,
-            MapLayerSettingsKeys.SAVED_PLACES
+            MapLayerSettingsKeys.SAVED_PLACES,
+            MapLayerSettingsKeys.BASEMAP
         ).map { it.name }
 
         assertEquals(names.size, names.toSet().size)
+    }
+
+    @Test
+    fun defaultBasemap_isTerrain() {
+        assertEquals(MapBasemap.TERRAIN, MapLayerSettings().basemap)
+    }
+
+    @Test
+    fun satelliteBasemap_isReadBackWithLayerSwitches() {
+        val settings = MapLayerSettings(
+            contours = false,
+            walkedTrails = true,
+            basemap = MapBasemap.SATELLITE
+        )
+
+        assertEquals(settings, roundTrip(settings))
+    }
+
+    @Test
+    fun basemap_isStoredByEnumName() {
+        val preferences = mutablePreferencesOf()
+        preferences.writeMapLayerSettings(MapLayerSettings(basemap = MapBasemap.SATELLITE))
+
+        assertEquals("SATELLITE", preferences[MapLayerSettingsKeys.BASEMAP])
+    }
+
+    @Test
+    fun oldSettingsWithoutBasemap_loadTerrain() {
+        // Ustawienia zapisane przed dodaniem podkładu „Satelita”.
+        val preferences = mutablePreferencesOf(
+            MapLayerSettingsKeys.TRAILS to false,
+            MapLayerSettingsKeys.WALKED_TRAILS to true,
+            MapLayerSettingsKeys.SAVED_PLACES to false
+        )
+
+        assertEquals(
+            MapLayerSettings(
+                trails = false,
+                walkedTrails = true,
+                savedPlaces = false,
+                basemap = MapBasemap.TERRAIN
+            ),
+            preferences.toMapLayerSettings()
+        )
+    }
+
+    @Test
+    fun unknownBasemap_fallsBackToTerrain() {
+        val preferences = mutablePreferencesOf(
+            MapLayerSettingsKeys.BASEMAP to "HYBRID",
+            MapLayerSettingsKeys.PEAKS to false
+        )
+
+        assertEquals(
+            MapLayerSettings(peaks = false, basemap = MapBasemap.TERRAIN),
+            preferences.toMapLayerSettings()
+        )
+    }
+
+    @Test
+    fun basemapOfWrongType_fallsBackToTerrain() {
+        val preferences = mutablePreferencesOf(
+            booleanPreferencesKey(MapLayerSettingsKeys.BASEMAP.name) to true
+        )
+
+        assertEquals(MapLayerSettings(), preferences.toMapLayerSettings())
     }
 }

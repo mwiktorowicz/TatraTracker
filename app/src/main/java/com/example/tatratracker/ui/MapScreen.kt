@@ -1,6 +1,7 @@
 package com.example.tatratracker.ui
 
 import android.net.Uri
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
@@ -34,11 +35,14 @@ import com.example.tatratracker.data.PlannedRoutePointEntity
 import com.example.tatratracker.data.PlannedRoutePointType
 import com.example.tatratracker.ui.components.TatraFeatureDialog
 import com.example.tatratracker.ui.map.AddOwnPlaceDialog
+import com.example.tatratracker.ui.map.MapBasemap
+import com.example.tatratracker.ui.map.MapDataAttribution
 import com.example.tatratracker.ui.map.MapLayersPanel
 import com.example.tatratracker.ui.map.MapRoundButton
 import com.example.tatratracker.ui.map.MapRouteQuickActions
 import com.example.tatratracker.ui.map.MapSearchRepository
 import com.example.tatratracker.ui.map.MapSearchResult
+import com.example.tatratracker.ui.map.MapTilerLogo
 import com.example.tatratracker.ui.map.MapViewLifecycle
 import com.example.tatratracker.ui.map.PlannedRoute
 import com.example.tatratracker.ui.map.PlannedRouteActionsDialog
@@ -60,10 +64,12 @@ import com.example.tatratracker.ui.map.addRouteSelectionLayers
 import com.example.tatratracker.ui.map.addTatraMapLayers
 import com.example.tatratracker.ui.map.addWaypoint
 import com.example.tatratracker.ui.map.applyMapLayerVisibility
+import com.example.tatratracker.ui.map.applySatelliteReadability
+import com.example.tatratracker.ui.map.basemapStyleUrl
 import com.example.tatratracker.ui.map.clearPoint
 import com.example.tatratracker.ui.map.inputFor
-import com.example.tatratracker.ui.map.landscapeStyleUrl
 import com.example.tatratracker.ui.map.removeWaypoint
+import com.example.tatratracker.ui.map.restoreCameraIfReset
 import com.example.tatratracker.ui.map.routePointFromMap
 import com.example.tatratracker.ui.map.setPoint
 import com.example.tatratracker.ui.map.updateElevationMarker
@@ -73,6 +79,7 @@ import com.example.tatratracker.ui.map.updateRouteSelection
 import com.example.tatratracker.ui.map.updateSavedPlaces
 import com.example.tatratracker.ui.map.updateUserTracks
 import com.example.tatratracker.ui.map.updateWalkedTrails
+import com.example.tatratracker.ui.map.useMapTilerLogo
 import com.example.tatratracker.ui.theme.TatraDark
 import com.example.tatratracker.ui.theme.TatraGreen
 import com.example.tatratracker.viewmodel.GpxRouteImportOutcome
@@ -168,6 +175,10 @@ fun MapScreen(
 
     // Zapamiętane w DataStore – patrz MapViewModel.updateLayerSettings.
     val layerSettings by mapViewModel.layerSettings.collectAsState()
+    val layerSettingsLoaded by mapViewModel.layerSettingsLoaded.collectAsState()
+
+    // Podkład, którego styl wczytano albo właśnie się wczytuje (null – jeszcze żaden).
+    var styleBasemap by remember { mutableStateOf<MapBasemap?>(null) }
 
     // Warstwy „Przebyte szlaki” i „Moje punkty”.
     val walkedTrails by mapViewModel.walkedTrails.collectAsState()
@@ -515,15 +526,6 @@ fun MapScreen(
             false
     }
 
-    val mapStyleUrl =
-        remember(
-            apiKey
-        ) {
-            landscapeStyleUrl(
-                apiKey
-            )
-        }
-
     val mapView =
         remember(
             context
@@ -568,6 +570,17 @@ fun MapScreen(
 
                 mapLoading =
                     false
+
+                // Zdjęcia satelitarne się nie wczytały: komunikat i powrót do „Teren”
+                // (także w zapisanych ustawieniach). Efekt podkładu wczyta wtedy „Teren”.
+                if (styleBasemap == MapBasemap.SATELLITE && loadedStyle == null) {
+                    Toast.makeText(
+                        context,
+                        "Nie udało się wczytać widoku satelitarnego. Mapa wróciła do podkładu „Teren”.",
+                        Toast.LENGTH_LONG
+                    ).show()
+                    mapViewModel.fallBackToTerrainBasemap()
+                }
             }
 
         mapView.getMapAsync {
@@ -592,73 +605,114 @@ fun MapScreen(
                     false
                 )
 
-            map.setStyle(
-                Style
-                    .Builder()
-                    .fromUri(
-                        mapStyleUrl
-                    )
-            ) {
-                    style ->
+            map.useMapTilerLogo(context)
 
-                addTatraMapLayers(
-                    context =
-                        context,
-                    style =
-                        style,
-                    apiKey =
-                        apiKey,
-                    tracks =
-                        tracks
-                )
-
-                addRouteSelectionLayers(
-                    style
-                )
-
-                addPlannedRouteLayers(
-                    style
-                )
-
-                addElevationMarkerLayers(
-                    style
-                )
-
-                updateRouteSelection(
-                    style =
-                        style,
-                    state =
-                        routePlanningState
-                )
-
-                updatePlannedRoute(
-                    style =
-                        style,
-                    route =
-                        plannedRoute
-                )
-
-                updateElevationMarker(
-                    style =
-                        style,
-                    sample =
-                        selectedElevationSample
-                )
-
-                applyMapLayerVisibility(
-                    style =
-                        style,
-                    settings =
-                        layerSettings
-                )
-
-                loadedStyle =
-                    style
-
-                mapLoading =
-                    false
-            }
+            // Styl wczytuje efekt podkładu poniżej, gdy znane są zapisane ustawienia.
         }
+    }
+
+    /*
+     * Jedyna ścieżka „styl wczytany → dołóż warstwy”: pierwsze wczytanie mapy i każda zmiana
+     * podkładu. Nowy styl nie ma naszych źródeł ani warstw, więc dokładamy je od nowa z bieżącym
+     * stanem (ślady, wybór punktów trasy, wyznaczona trasa, znacznik profilu, widoczność warstw);
+     * przebyte szlaki i moje punkty wracają przez efekty zależne od loadedStyle. Stan planowania
+     * trasy żyje w tym ekranie, nie w stylu, więc zmiana podkładu go nie rusza.
+     */
+    fun loadBasemap(
+        map: MapLibreMap,
+        basemap: MapBasemap
+    ) {
+
+        // Po setStyle stary Style rzuca wyjątek przy każdym użyciu – efekty nie mogą go już dostać.
+        loadedStyle = null
+        styleBasemap = basemap
+        mapLoading = true
+
+        val cameraBeforeSwitch = map.cameraPosition
+
+        map.setStyle(
+            Style
+                .Builder()
+                .fromUri(
+                    basemapStyleUrl(basemap, apiKey)
+                )
+        ) {
+                style ->
+
+            addTatraMapLayers(
+                context =
+                    context,
+                style =
+                    style,
+                apiKey =
+                    apiKey,
+                tracks =
+                    tracks
+            )
+
+            addRouteSelectionLayers(
+                style
+            )
+
+            addPlannedRouteLayers(
+                style
+            )
+
+            addElevationMarkerLayers(
+                style
+            )
+
+            updateRouteSelection(
+                style =
+                    style,
+                state =
+                    routePlanningState
+            )
+
+            updatePlannedRoute(
+                style =
+                    style,
+                route =
+                    plannedRoute
+            )
+
+            updateElevationMarker(
+                style =
+                    style,
+                sample =
+                    selectedElevationSample
+            )
+
+            applyMapLayerVisibility(
+                style =
+                    style,
+                settings =
+                    layerSettings
+            )
+
+            if (basemap == MapBasemap.SATELLITE) {
+                applySatelliteReadability(style)
+            }
+
+            map.restoreCameraIfReset(cameraBeforeSwitch)
+
+            loadedStyle =
+                style
+
+            mapLoading =
+                false
+        }
+    }
+
+    // Pierwszy styl dopiero po odczycie zapisanego podkładu, potem przy każdej jego zmianie.
+    LaunchedEffect(mapLibreMap, layerSettingsLoaded, layerSettings.basemap) {
+        val map = mapLibreMap ?: return@LaunchedEffect
+
+        if (!layerSettingsLoaded || layerSettings.basemap == styleBasemap) {
+            return@LaunchedEffect
+        }
+
+        loadBasemap(map, layerSettings.basemap)
     }
 
     DisposableEffect(
@@ -1113,6 +1167,15 @@ fun MapScreen(
             factory = {
                 mapView
             }
+        )
+
+        // Logo MapTiler i autorzy danych na obu podkładach; przycisk „i” obok logo rysuje MapLibre.
+        MapTilerLogo(
+            modifier = Modifier.align(Alignment.BottomStart)
+        )
+
+        MapDataAttribution(
+            modifier = Modifier.align(Alignment.BottomEnd)
         )
 
         MapRoundButton(

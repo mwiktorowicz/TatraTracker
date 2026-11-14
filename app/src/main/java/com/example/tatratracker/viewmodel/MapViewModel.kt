@@ -14,6 +14,7 @@ import com.example.tatratracker.data.TrackPointMapper
 import com.example.tatratracker.data.TrailProgressRepository
 import com.example.tatratracker.data.TrailProgressState
 import com.example.tatratracker.model.TrackPoint
+import com.example.tatratracker.ui.map.MapBasemap
 import com.example.tatratracker.ui.map.MapLayerSettings
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -71,6 +72,14 @@ class MapViewModel(
     // Jeśli użytkownik przełączy warstwę, zanim skończy się odczyt, nie nadpisujemy jego wyboru.
     private var layerSettingsChangedByUser = false
 
+    private val _layerSettingsLoaded = MutableStateFlow(false)
+
+    /**
+     * true po pierwszym odczycie ustawień. Mapa czeka na niego z wczytaniem stylu,
+     * żeby przy zapisanym „Satelita” nie pobierać najpierw podkładu „Teren”.
+     */
+    val layerSettingsLoaded: StateFlow<Boolean> = _layerSettingsLoaded.asStateFlow()
+
     /** Zapisane miejsca do warstwy „Moje punkty”; nowe i usunięte widać od razu. */
     val savedPlaces: StateFlow<List<SavedPlaceEntity>> =
         savedPlaceRepository
@@ -105,9 +114,15 @@ class MapViewModel(
     fun updateLayerSettings(settings: MapLayerSettings) {
         layerSettingsChangedByUser = true
         _layerSettings.value = settings
+        _layerSettingsLoaded.value = true
         viewModelScope.launch {
             layerSettingsStore.save(settings)
         }
+    }
+
+    /** Styl satelitarny się nie wczytał: wracamy do „Teren”, także w zapisanych ustawieniach. */
+    fun fallBackToTerrainBasemap() {
+        updateLayerSettings(_layerSettings.value.copy(basemap = MapBasemap.TERRAIN))
     }
 
     /**
@@ -156,6 +171,7 @@ class MapViewModel(
             if (!layerSettingsChangedByUser) {
                 _layerSettings.value = stored
             }
+            _layerSettingsLoaded.value = true
         }
     }
 
