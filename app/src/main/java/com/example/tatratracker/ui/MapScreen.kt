@@ -45,6 +45,7 @@ import com.example.tatratracker.ui.map.MapRouteQuickActions
 import com.example.tatratracker.ui.map.MapSearchRepository
 import com.example.tatratracker.ui.map.MapSearchResult
 import com.example.tatratracker.ui.map.MapTilerLogo
+import com.example.tatratracker.ui.map.MapTrailCard
 import com.example.tatratracker.ui.map.MapViewLifecycle
 import com.example.tatratracker.ui.map.PlannedRoute
 import com.example.tatratracker.ui.map.PlannedRouteActionsDialog
@@ -61,12 +62,14 @@ import com.example.tatratracker.ui.map.RouteRoutingRepository
 import com.example.tatratracker.ui.map.RouteTarget
 import com.example.tatratracker.ui.map.SavePlannedRouteDialog
 import com.example.tatratracker.ui.map.SelectedMapPoi
+import com.example.tatratracker.ui.map.SelectedMapTrail
 import com.example.tatratracker.ui.map.TATRA_CENTER
 import com.example.tatratracker.ui.map.addElevationMarkerLayers
 import com.example.tatratracker.ui.map.addPlannedRouteLayers
 import com.example.tatratracker.ui.map.addPoiSelectionLayers
 import com.example.tatratracker.ui.map.addRouteSelectionLayers
 import com.example.tatratracker.ui.map.addTatraMapLayers
+import com.example.tatratracker.ui.map.addTrailSelectionLayers
 import com.example.tatratracker.ui.map.addWaypoint
 import com.example.tatratracker.ui.map.applyMapLayerVisibility
 import com.example.tatratracker.ui.map.applySatelliteReadability
@@ -74,17 +77,20 @@ import com.example.tatratracker.ui.map.basemapStyleUrl
 import com.example.tatratracker.ui.map.clearPoint
 import com.example.tatratracker.ui.map.findTappedPoi
 import com.example.tatratracker.ui.map.inputFor
+import com.example.tatratracker.ui.map.isTrailUnderTap
 import com.example.tatratracker.ui.map.poiVisitInfoFor
 import com.example.tatratracker.ui.map.removeWaypoint
 import com.example.tatratracker.ui.map.restoreCameraIfReset
 import com.example.tatratracker.ui.map.routePointFromMap
 import com.example.tatratracker.ui.map.setPoint
+import com.example.tatratracker.ui.map.tapToleranceMeters
 import com.example.tatratracker.ui.map.updateElevationMarker
 import com.example.tatratracker.ui.map.updatePlannedRoute
 import com.example.tatratracker.ui.map.updatePoiSelection
 import com.example.tatratracker.ui.map.updateQuery
 import com.example.tatratracker.ui.map.updateRouteSelection
 import com.example.tatratracker.ui.map.updateSavedPlaces
+import com.example.tatratracker.ui.map.updateTrailSelection
 import com.example.tatratracker.ui.map.updateUserTracks
 import com.example.tatratracker.ui.map.updateWalkedTrails
 import com.example.tatratracker.ui.map.useMapTilerLogo
@@ -196,6 +202,13 @@ fun MapScreen(
     val poiVisits by mapViewModel.poiVisits.collectAsState()
     var selectedPoi by remember { mutableStateOf<SelectedMapPoi?>(null) }
     val poiTapRadiusPx = with(LocalDensity.current) { 18.dp.toPx() }
+
+    // Szlak wybrany dotknięciem mapy i postęp przejścia do jego karty.
+    val trailProgress by mapViewModel.trailProgress.collectAsState()
+    var selectedTrail by remember { mutableStateOf<SelectedMapTrail?>(null) }
+
+    // Numer ostatniego dotknięcia: spóźniony wynik wyszukiwania szlaku nie nadpisze nowszego wyboru.
+    val mapTapVersion = remember { intArrayOf(0) }
 
     var isImportingGpx by remember { mutableStateOf(false) }
 
@@ -666,6 +679,9 @@ fun MapScreen(
             // Pierścień wybranego punktu: nad punktami mapy, pod znacznikami trasy.
             addPoiSelectionLayers(style)
 
+            // Podświetlenie wybranego szlaku: pod liniami szlaków.
+            addTrailSelectionLayers(style)
+
             addRouteSelectionLayers(
                 style
             )
@@ -720,7 +736,8 @@ fun MapScreen(
         }
     }
 
-    // Dotknięcie mapy przy zamkniętym panelu planowania: wybór punktu albo zamknięcie karty.
+    // Dotknięcie mapy przy zamkniętym panelu planowania: wybór punktu, a gdy pod palcem
+    // nie ma punktu – szlaku; dotknięcie pustego miejsca zamyka kartę.
     // Przy otwartym panelu mapa na dotyk nie reaguje, poza wskazywaniem punktu trasy,
     // które obsługuje osobny słuchacz niżej.
     DisposableEffect(mapLibreMap, showRoutePlanner) {
@@ -738,7 +755,18 @@ fun MapScreen(
                             findTappedPoi(map, point, poiTapRadiusPx)
                         }
 
+                    val tapVersion = ++mapTapVersion[0]
+
                     selectedPoi = poi
+
+                    val trailTapped =
+                        poi == null &&
+                            loadedStyle != null &&
+                            isTrailUnderTap(map, point, poiTapRadiusPx)
+
+                    if (!trailTapped) {
+                        selectedTrail = null
+                    }
 
                     if (poi != null) {
                         showLayersPanel = false
@@ -751,7 +779,30 @@ fun MapScreen(
                         }
                     }
 
-                    poi != null
+                    if (trailTapped) {
+                        showLayersPanel = false
+
+                        val tolerance = tapToleranceMeters(map, point, poiTapRadiusPx)
+
+                        coroutineScope.launch {
+                            val trails =
+                                mapViewModel.findTrailsNear(
+                                    latitude = point.latitude,
+                                    longitude = point.longitude,
+                                    toleranceMeters = tolerance
+                                )
+
+                            if (tapVersion == mapTapVersion[0]) {
+                                selectedTrail = SelectedMapTrail(trails)
+
+                                if (trails.isNotEmpty()) {
+                                    mapViewModel.requestTrailProgress()
+                                }
+                            }
+                        }
+                    }
+
+                    poi != null || trailTapped
                 }
 
             map.addOnMapClickListener(listener)
@@ -764,7 +815,28 @@ fun MapScreen(
 
     LaunchedEffect(showRoutePlanner) {
         if (showRoutePlanner) {
+            mapTapVersion[0]++
             selectedPoi = null
+            selectedTrail = null
+        }
+    }
+
+    // Wyłączenie warstwy „Szlaki” chowa też kartę i podświetlenie wybranego szlaku.
+    LaunchedEffect(layerSettings.trails) {
+        if (!layerSettings.trails) {
+            mapTapVersion[0]++
+            selectedTrail = null
+        }
+    }
+
+    // Podświetlenie całego wybranego szlaku; wraca też po zmianie podkładu.
+    LaunchedEffect(selectedTrail?.selected?.name, loadedStyle) {
+        val style = loadedStyle ?: return@LaunchedEffect
+        val geoJson = selectedTrail?.selected?.name?.let { name -> mapViewModel.trailGeoJson(name) }
+
+        // Podczas wczytywania geometrii podkład mógł się zmienić – stary styl jest wtedy martwy.
+        if (style === loadedStyle) {
+            updateTrailSelection(style, geoJson)
         }
     }
 
@@ -1280,6 +1352,20 @@ fun MapScreen(
                     onNavigateHere = { startRoutePlanningAt(poi, RouteTarget.End) },
                     onRouteFromHere = { startRoutePlanningAt(poi, RouteTarget.Start) },
                     onClose = { selectedPoi = null }
+                )
+            }
+        }
+
+        selectedTrail?.let { trail ->
+            if (selectedPoi == null && !showRoutePlanner) {
+                MapTrailCard(
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(start = 14.dp, end = 14.dp, bottom = 74.dp),
+                    trail = trail,
+                    progressState = trailProgress,
+                    onSelectTrail = { index -> selectedTrail = trail.copy(selectedIndex = index) },
+                    onClose = { selectedTrail = null }
                 )
             }
         }

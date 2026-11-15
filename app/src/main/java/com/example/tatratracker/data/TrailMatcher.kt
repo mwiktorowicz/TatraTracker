@@ -61,6 +61,13 @@ data class TrailMatchResult(
         )
 }
 
+/** Szlak z pliku szlaków: nazwa, kolory wspólne dla całego szlaku i łączna długość. */
+data class TrailInfo(
+    val name: String,
+    val colors: List<String>,
+    val lengthMeters: Double
+)
+
 private fun fraction(
     part: Double,
     total: Double
@@ -1945,6 +1952,114 @@ class TrailMatcher(
         featuresJson.put(
             jsonFeature
         )
+    }
+
+    /*
+     * =====================================================
+     * SZLAK POD PALCEM (karta szlaku na mapie)
+     * =====================================================
+     */
+
+    /**
+     * Szlaki biegnące odcinkiem najbliższym podanemu miejscu, nie dalej niż
+     * [toleranceMeters]. Pusta lista – w pliku szlaków nie ma tam żadnego odcinka.
+     * Nie wymaga dopasowania śladów; pierwsze wywołanie wczytuje plik szlaków.
+     */
+    suspend fun findTrailsNear(
+        latitude: Double,
+        longitude: Double,
+        toleranceMeters: Double
+    ): List<TrailInfo> {
+        return withContext(Dispatchers.Default) {
+            val network = getOrLoadNetwork()
+
+            val feature =
+                findNearestFeature(network, Point(latitude, longitude), toleranceMeters)
+                    ?: return@withContext emptyList()
+
+            feature.names.distinct().map { name ->
+                TrailInfo(
+                    name = name,
+                    colors = network.trailColors[name].orEmpty(),
+                    lengthMeters = network.trailLengths[name] ?: 0.0
+                )
+            }
+        }
+    }
+
+    /** Wszystkie odcinki szlaku o podanej nazwie jako FeatureCollection linii. */
+    suspend fun trailGeoJson(name: String): String {
+        return withContext(Dispatchers.Default) {
+            val featuresJson = JSONArray()
+
+            getOrLoadNetwork()
+                .features
+                .filter { feature -> name in feature.names && feature.points.size >= 2 }
+                .forEach { feature ->
+                    addMatchedRun(
+                        featuresJson = featuresJson,
+                        feature = feature,
+                        startSegment = 0,
+                        endSegment = feature.points.lastIndex - 1
+                    )
+                }
+
+            JSONObject()
+                .put("type", "FeatureCollection")
+                .put("features", featuresJson)
+                .toString()
+        }
+    }
+
+    private fun findNearestFeature(
+        network: TrailNetwork,
+        point: Point,
+        toleranceMeters: Double
+    ): TrailFeature? {
+        val latTolerance = toleranceMeters / 111_320.0
+
+        val lonMetersPerDegree = 111_320.0 * cos(Math.toRadians(point.lat))
+
+        val lonTolerance =
+            if (lonMetersPerDegree > 1.0) {
+                toleranceMeters / lonMetersPerDegree
+            } else {
+                latTolerance
+            }
+
+        val pointXY = toXY(point, point.lat)
+
+        var nearest: TrailFeature? = null
+        var nearestDistance = toleranceMeters
+
+        // Ten sam odcinek leży w kilku komórkach indeksu – liczymy go raz.
+        val checked = mutableSetOf<SegmentRef>()
+
+        for (x in gridX(point.lon - lonTolerance)..gridX(point.lon + lonTolerance)) {
+            for (y in gridY(point.lat - latTolerance)..gridY(point.lat + latTolerance)) {
+                network.spatialIndex[CellKey(x = x, y = y)]?.forEach { ref ->
+                    if (!checked.add(ref)) {
+                        return@forEach
+                    }
+
+                    val feature = network.features[ref.featureIndex]
+
+                    val distance =
+                        pointToSegmentDistance(
+                            point = pointXY,
+                            start = toXY(feature.points[ref.segmentIndex], point.lat),
+                            end = toXY(feature.points[ref.segmentIndex + 1], point.lat)
+                        )
+
+                    if (distance <= nearestDistance) {
+                        nearestDistance = distance
+                        nearest = feature
+                    }
+                }
+            }
+        }
+
+        return nearest
     }
 
     companion object {

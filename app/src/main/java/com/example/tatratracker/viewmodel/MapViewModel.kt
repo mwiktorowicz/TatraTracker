@@ -12,6 +12,8 @@ import com.example.tatratracker.data.SavedPlaceCategory
 import com.example.tatratracker.data.SavedPlaceEntity
 import com.example.tatratracker.data.SavedPlaceRepository
 import com.example.tatratracker.data.TrackPointMapper
+import com.example.tatratracker.data.TrailInfo
+import com.example.tatratracker.data.TrailMatcher
 import com.example.tatratracker.data.TrailProgressRepository
 import com.example.tatratracker.data.TrailProgressState
 import com.example.tatratracker.model.TrackPoint
@@ -112,6 +114,48 @@ class MapViewModel(
                 }
             }
             .stateIn(viewModelScope, SharingStarted.Eagerly, WalkedTrailsLayerState())
+
+    // Tylko do wyszukania szlaku pod palcem; plik szlaków jest wczytywany raz na proces.
+    private val trailMatcher by lazy { TrailMatcher(application) }
+
+    private val trailProgressRequested = MutableStateFlow(false)
+
+    /**
+     * Postęp na szlakach do karty szlaku. null, dopóki nikt nie dotknął szlaku –
+     * dopasowanie śladów jest kosztowne, więc rusza dopiero po [requestTrailProgress].
+     */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val trailProgress: StateFlow<TrailProgressState?> =
+        trailProgressRequested
+            .flatMapLatest { requested ->
+                if (requested) {
+                    trailProgressRepository.state
+                } else {
+                    flowOf(null)
+                }
+            }
+            .stateIn(viewModelScope, SharingStarted.Eagerly, null)
+
+    /** Wołane przy dotknięciu szlaku; po wcześniejszym błędzie ponawia liczenie. */
+    fun requestTrailProgress() {
+        if (trailProgressRequested.value && trailProgressRepository.state.value.errorMessage != null) {
+            trailProgressRepository.recalculate()
+        }
+
+        trailProgressRequested.value = true
+    }
+
+    /** Szlaki biegnące odcinkiem najbliższym podanemu miejscu (pusta lista – brak w pliku szlaków). */
+    suspend fun findTrailsNear(
+        latitude: Double,
+        longitude: Double,
+        toleranceMeters: Double
+    ): List<TrailInfo> {
+        return trailMatcher.findTrailsNear(latitude, longitude, toleranceMeters)
+    }
+
+    /** Geometria całego szlaku o podanej nazwie do podświetlenia na mapie. */
+    suspend fun trailGeoJson(name: String): String = trailMatcher.trailGeoJson(name)
 
     init {
         observeAllTracks()
