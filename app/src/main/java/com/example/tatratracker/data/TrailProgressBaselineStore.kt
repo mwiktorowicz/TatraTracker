@@ -44,13 +44,14 @@ class TrailProgressBaselineStore(context: Context) {
             .map { preferences -> preferences.toTrailProgressBaseline() }
 
     /** Zapisuje świeżo policzony postęp (atomowo, na aktualnie zapisanym stanie). */
-    suspend fun record(fraction: Double, maxActivityId: Int) {
+    suspend fun record(fraction: Double, maxActivityId: Int, completedTrailCount: Int) {
         dataStore.edit { preferences ->
             preferences.writeTrailProgressBaseline(
                 ActivitySummaryCalculator.advanceBaseline(
                     baseline = preferences.toTrailProgressBaseline(),
                     fraction = fraction,
-                    maxActivityId = maxActivityId
+                    maxActivityId = maxActivityId,
+                    completedTrailCount = completedTrailCount
                 )
             )
         }
@@ -63,20 +64,27 @@ class TrailProgressBaselineStore(context: Context) {
 internal object TrailProgressBaselineKeys {
     val CURRENT_FRACTION = doublePreferencesKey("current_fraction")
     val CURRENT_MAX_ACTIVITY_ID = intPreferencesKey("current_max_activity_id")
+    val CURRENT_COMPLETED_TRAILS = intPreferencesKey("current_completed_trails")
     val PREVIOUS_FRACTION = doublePreferencesKey("previous_fraction")
     val PREVIOUS_MAX_ACTIVITY_ID = intPreferencesKey("previous_max_activity_id")
+    val PREVIOUS_COMPLETED_TRAILS = intPreferencesKey("previous_completed_trails")
 }
 
-/** Stan niepełny (brak jednego z kluczy, zły typ, ułamek spoza 0–1) liczy się jako brak. */
+/**
+ * Stan niepełny (brak ułamka albo numeru aktywności, zły typ, ułamek spoza 0–1) liczy się
+ * jako brak. Liczba ukończonych szlaków jest opcjonalna – starsze zapisy jej nie mają.
+ */
 internal fun Preferences.toTrailProgressBaseline(): TrailProgressBaseline {
     return TrailProgressBaseline(
         current = readRecord(
             TrailProgressBaselineKeys.CURRENT_FRACTION,
-            TrailProgressBaselineKeys.CURRENT_MAX_ACTIVITY_ID
+            TrailProgressBaselineKeys.CURRENT_MAX_ACTIVITY_ID,
+            TrailProgressBaselineKeys.CURRENT_COMPLETED_TRAILS
         ),
         previous = readRecord(
             TrailProgressBaselineKeys.PREVIOUS_FRACTION,
-            TrailProgressBaselineKeys.PREVIOUS_MAX_ACTIVITY_ID
+            TrailProgressBaselineKeys.PREVIOUS_MAX_ACTIVITY_ID,
+            TrailProgressBaselineKeys.PREVIOUS_COMPLETED_TRAILS
         )
     )
 }
@@ -85,18 +93,21 @@ internal fun MutablePreferences.writeTrailProgressBaseline(baseline: TrailProgre
     writeRecord(
         baseline.current,
         TrailProgressBaselineKeys.CURRENT_FRACTION,
-        TrailProgressBaselineKeys.CURRENT_MAX_ACTIVITY_ID
+        TrailProgressBaselineKeys.CURRENT_MAX_ACTIVITY_ID,
+        TrailProgressBaselineKeys.CURRENT_COMPLETED_TRAILS
     )
     writeRecord(
         baseline.previous,
         TrailProgressBaselineKeys.PREVIOUS_FRACTION,
-        TrailProgressBaselineKeys.PREVIOUS_MAX_ACTIVITY_ID
+        TrailProgressBaselineKeys.PREVIOUS_MAX_ACTIVITY_ID,
+        TrailProgressBaselineKeys.PREVIOUS_COMPLETED_TRAILS
     )
 }
 
 private fun Preferences.readRecord(
     fractionKey: Preferences.Key<Double>,
-    maxActivityIdKey: Preferences.Key<Int>
+    maxActivityIdKey: Preferences.Key<Int>,
+    completedTrailsKey: Preferences.Key<Int>
 ): TrailProgressRecord? {
     // Przez asMap, bo pod naszą nazwą może leżeć wartość innego typu (por. AppSettingsStore).
     val fraction = asMap()[fractionKey] as? Double ?: return null
@@ -106,19 +117,32 @@ private fun Preferences.readRecord(
         return null
     }
 
-    return TrailProgressRecord(fraction = fraction, maxActivityId = maxActivityId)
+    return TrailProgressRecord(
+        fraction = fraction,
+        maxActivityId = maxActivityId,
+        completedTrailCount = (asMap()[completedTrailsKey] as? Int)?.takeIf { it >= 0 }
+    )
 }
 
 private fun MutablePreferences.writeRecord(
     record: TrailProgressRecord?,
     fractionKey: Preferences.Key<Double>,
-    maxActivityIdKey: Preferences.Key<Int>
+    maxActivityIdKey: Preferences.Key<Int>,
+    completedTrailsKey: Preferences.Key<Int>
 ) {
     if (record == null) {
         remove(fractionKey)
         remove(maxActivityIdKey)
+        remove(completedTrailsKey)
+        return
+    }
+
+    this[fractionKey] = record.fraction
+    this[maxActivityIdKey] = record.maxActivityId
+
+    if (record.completedTrailCount == null) {
+        remove(completedTrailsKey)
     } else {
-        this[fractionKey] = record.fraction
-        this[maxActivityIdKey] = record.maxActivityId
+        this[completedTrailsKey] = record.completedTrailCount
     }
 }

@@ -32,10 +32,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.tatratracker.achievements.Achievement
+import com.example.tatratracker.achievements.AchievementsResult
+import com.example.tatratracker.achievements.ActivityRecord
 import com.example.tatratracker.collection.CollectionItemProgress
 import com.example.tatratracker.collection.CollectionProgress
 import com.example.tatratracker.collection.CollectionSetProgress
@@ -66,7 +70,8 @@ private const val BADGES_PER_ROW = 3
 
 /**
  * „Kolekcja”: gotowe zestawy szczytów i schronisk jak książeczka odznak –
- * zdobyte w kolorze z datą pierwszego wejścia, niezdobyte szare.
+ * zdobyte w kolorze z datą pierwszego wejścia, niezdobyte szare. Nad zestawami
+ * osiągnięcia i rekordy liczone z wędrówek.
  */
 @Composable
 fun CollectionScreen(
@@ -113,6 +118,10 @@ fun CollectionScreen(
 
             state.progress?.let { progress ->
                 CollectionSummaryCard(progress)
+
+                state.achievements?.let { achievements ->
+                    AchievementsCard(achievements)
+                }
 
                 progress.sets.forEach { set ->
                     CollectionSetCard(
@@ -162,6 +171,122 @@ private fun CollectionSummaryCard(progress: CollectionProgress) {
             )
         }
     }
+}
+
+@Composable
+private fun AchievementsCard(result: AchievementsResult) {
+    TatraCard(modifier = Modifier.fillMaxWidth()) {
+        Column(verticalArrangement = Arrangement.spacedBy(TatraSpacing.sm)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Osiągnięcia",
+                    color = TatraDark,
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.weight(1f)
+                )
+
+                Text(
+                    text = "${result.earnedCount} z ${result.achievements.size}",
+                    color = if (result.earnedCount > 0) TatraGreenDark else TatraTextMuted,
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.padding(start = TatraSpacing.sm)
+                )
+            }
+
+            result.achievements.forEach { achievement ->
+                AchievementListRow(
+                    icon = achievementIcon(achievement.kind),
+                    highlighted = achievement.isEarned,
+                    title = achievement.kind.title,
+                    subtitle = achievementSubtitle(achievement)
+                )
+            }
+
+            if (result.records.isNotEmpty()) {
+                Text(
+                    text = "Rekordy",
+                    color = TatraDark,
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.padding(top = TatraSpacing.xs)
+                )
+
+                result.records.forEach { record ->
+                    AchievementListRow(
+                        icon = recordIcon(record.kind),
+                        highlighted = true,
+                        title = "${recordTitle(record.kind)}: ${recordValue(record)}",
+                        subtitle = recordSubtitle(record)
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun AchievementListRow(
+    icon: ImageVector,
+    highlighted: Boolean,
+    title: String,
+    subtitle: String
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .size(44.dp)
+                .clip(CircleShape)
+                .background(if (highlighted) TatraGreen else TatraSurfaceStrong),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = if (highlighted) TatraWhite else TatraTextSoft,
+                modifier = Modifier.size(24.dp)
+            )
+        }
+
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .padding(start = TatraSpacing.sm)
+        ) {
+            Text(
+                text = title,
+                color = if (highlighted) TatraDark else TatraTextMuted,
+                style = MaterialTheme.typography.bodyLarge
+            )
+
+            Text(
+                text = subtitle,
+                color = if (highlighted) TatraGreenDark else TatraTextSoft,
+                style = MaterialTheme.typography.bodySmall
+            )
+        }
+    }
+}
+
+// Zdobyte: „Zdobyte 12.08.2026”; niezdobyte: opis i postęp, np. „Zdobądź 5 różnych szczytów. · 3 z 5”.
+private fun achievementSubtitle(achievement: Achievement): String {
+    if (achievement.isEarned) {
+        return achievement.earnedAt?.let { "Zdobyte ${formatCollectionDate(it)}" } ?: "Zdobyte"
+    }
+
+    return if (achievement.target > 1) {
+        "${achievement.kind.description} · ${achievement.current} z ${achievement.target}"
+    } else {
+        achievement.kind.description
+    }
+}
+
+private fun recordSubtitle(record: ActivityRecord): String {
+    return "${record.activityName} · ${formatCollectionDate(record.timestamp)}"
 }
 
 @Composable

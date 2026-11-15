@@ -32,6 +32,17 @@ class TrailProgressBaselineStoreTest {
     }
 
     @Test
+    fun completedTrailCount_isReadBackAndOptional() {
+        val baseline = TrailProgressBaseline(
+            current = TrailProgressRecord(0.125, 12, completedTrailCount = 3),
+            // Stan zapisany, zanim aplikacja zaczęła pamiętać liczbę ukończonych szlaków.
+            previous = TrailProgressRecord(0.1, 11)
+        )
+
+        assertEquals(baseline, roundTrip(baseline))
+    }
+
+    @Test
     fun currentOnly_isReadBack() {
         val baseline = TrailProgressBaseline(current = TrailProgressRecord(0.0, 0))
 

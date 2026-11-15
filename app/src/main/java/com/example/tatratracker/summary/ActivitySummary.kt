@@ -13,10 +13,14 @@ import com.example.tatratracker.data.SavedPlaceEntity
  * i o ile po niej urósł postęp na sieci szlaków.
  */
 
-/** Postęp na sieci szlaków policzony, gdy najnowsza aktywność miała numer [maxActivityId]. */
+/**
+ * Postęp na sieci szlaków policzony, gdy najnowsza aktywność miała numer [maxActivityId].
+ * [completedTrailCount] = null w stanach zapisanych, zanim aplikacja zaczęła go pamiętać.
+ */
 data class TrailProgressRecord(
     val fraction: Double,
-    val maxActivityId: Int
+    val maxActivityId: Int,
+    val completedTrailCount: Int? = null
 )
 
 /**
@@ -66,9 +70,15 @@ object ActivitySummaryCalculator {
     fun advanceBaseline(
         baseline: TrailProgressBaseline,
         fraction: Double,
-        maxActivityId: Int
+        maxActivityId: Int,
+        completedTrailCount: Int? = null
     ): TrailProgressBaseline {
-        val record = TrailProgressRecord(fraction = fraction, maxActivityId = maxActivityId)
+        val record =
+            TrailProgressRecord(
+                fraction = fraction,
+                maxActivityId = maxActivityId,
+                completedTrailCount = completedTrailCount
+            )
         val current = baseline.current
 
         return when {
@@ -90,6 +100,26 @@ object ActivitySummaryCalculator {
      * null, gdy nie ma punktu odniesienia sprzed tej wędrówki albo postęp jeszcze jej nie obejmuje.
      */
     fun trailGrowth(baseline: TrailProgressBaseline, activityId: Int): Double? {
+        val (previous, current) = statesAround(baseline, activityId) ?: return null
+
+        return (current.fraction - previous.fraction).coerceAtLeast(0.0)
+    }
+
+    /**
+     * Czy pierwszy ukończony szlak pojawił się po przybyciu m.in. wędrówki [activityId]:
+     * przed nią nie było żadnego, po niej jest co najmniej jeden.
+     */
+    fun firstTrailCompleted(baseline: TrailProgressBaseline, activityId: Int): Boolean {
+        val (previous, current) = statesAround(baseline, activityId) ?: return false
+
+        return previous.completedTrailCount == 0 && (current.completedTrailCount ?: 0) >= 1
+    }
+
+    // Stan sprzed wędrówki i stan, który już ją obejmuje – albo null, gdy któregoś brakuje.
+    private fun statesAround(
+        baseline: TrailProgressBaseline,
+        activityId: Int
+    ): Pair<TrailProgressRecord, TrailProgressRecord>? {
         val current = baseline.current ?: return null
         val previous = baseline.previous ?: return null
 
@@ -97,7 +127,7 @@ object ActivitySummaryCalculator {
             return null
         }
 
-        return (current.fraction - previous.fraction).coerceAtLeast(0.0)
+        return previous to current
     }
 
     /**

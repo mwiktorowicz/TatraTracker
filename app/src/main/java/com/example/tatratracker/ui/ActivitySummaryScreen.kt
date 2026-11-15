@@ -2,6 +2,13 @@ package com.example.tatratracker.ui
 
 import androidx.compose.foundation.background
 import android.widget.Toast
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -21,6 +28,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Cottage
+import androidx.compose.material.icons.outlined.EmojiEvents
 import androidx.compose.material.icons.outlined.Hiking
 import androidx.compose.material.icons.outlined.Landscape
 import androidx.compose.material.icons.outlined.Place
@@ -34,15 +42,18 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.graphics.layer.GraphicsLayer
@@ -56,6 +67,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.tatratracker.achievements.NewAchievements
 import com.example.tatratracker.data.ActivityEntity
 import com.example.tatratracker.data.SavedPlaceCategory
 import com.example.tatratracker.data.SavedPlaceEntity
@@ -80,7 +92,18 @@ import java.util.Locale
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.launch
 
-private const val SUMMARY_PAGE_COUNT = 5
+private enum class SummaryPageKind {
+    HIKE,
+    ELEVATION,
+    PLACES,
+    TRAILS,
+    ACHIEVEMENTS,
+    SHARE
+}
+
+// Plansza „Nowe osiągnięcia” jest tylko wtedy, gdy wędrówka coś przyniosła.
+private val PAGES_WITH_ACHIEVEMENTS = SummaryPageKind.entries.toList()
+private val PAGES_WITHOUT_ACHIEVEMENTS = PAGES_WITH_ACHIEVEMENTS - SummaryPageKind.ACHIEVEMENTS
 
 // Najwyżej tyle nowych miejsc mieści się na planszy z nazwy.
 private const val MAX_LISTED_PLACES = 6
@@ -93,7 +116,7 @@ private val SummaryDivider = TatraWhite.copy(alpha = 0.14f)
 
 /**
  * Pełnoekranowe plansze podsumowania jednej wędrówki, przesuwane w bok:
- * wędrówka, wysokość, nowe miejsca, szlaki i karta do udostępnienia.
+ * wędrówka, wysokość, nowe miejsca, szlaki, nowe osiągnięcia (jeśli są) i karta do udostępnienia.
  */
 @Composable
 fun ActivitySummaryScreen(
@@ -102,7 +125,10 @@ fun ActivitySummaryScreen(
 ) {
     val state by viewModel.uiState.collectAsState()
 
-    val pagerState = rememberPagerState(pageCount = { SUMMARY_PAGE_COUNT })
+    val pages =
+        if (state.newAchievements.isEmpty) PAGES_WITHOUT_ACHIEVEMENTS else PAGES_WITH_ACHIEVEMENTS
+
+    val pagerState = rememberPagerState(pageCount = { pages.size })
     val scope = rememberCoroutineScope()
 
     val context = LocalContext.current
@@ -163,12 +189,21 @@ fun ActivitySummaryScreen(
                         .fillMaxWidth()
                         .weight(1f)
                 ) { page ->
-                    when (page) {
-                        0 -> HikePage(activity)
-                        1 -> ElevationPage(state.elevation)
-                        2 -> PlacesPage(state.places)
-                        3 -> TrailsPage(state.trails)
-                        else ->
+                    when (pages.getOrNull(page)) {
+                        SummaryPageKind.HIKE -> HikePage(activity)
+                        SummaryPageKind.ELEVATION -> ElevationPage(state.elevation)
+                        SummaryPageKind.PLACES -> PlacesPage(state.places)
+                        SummaryPageKind.TRAILS -> TrailsPage(state.trails)
+
+                        SummaryPageKind.ACHIEVEMENTS ->
+                            AchievementsPage(
+                                newAchievements = state.newAchievements,
+                                isCurrent = pagerState.currentPage == page
+                            )
+
+                        null -> Unit
+
+                        SummaryPageKind.SHARE ->
                             SharePage(
                                 activity = activity,
                                 state = state,
@@ -205,14 +240,14 @@ fun ActivitySummaryScreen(
                 }
 
                 PageDots(
-                    pageCount = SUMMARY_PAGE_COUNT,
+                    pageCount = pages.size,
                     currentPage = pagerState.currentPage,
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(vertical = TatraSpacing.sm)
                 )
 
-                val isLastPage = pagerState.currentPage == SUMMARY_PAGE_COUNT - 1
+                val isLastPage = pagerState.currentPage >= pages.size - 1
 
                 TatraPrimaryButton(
                     onClick = {
@@ -413,6 +448,95 @@ private fun TrailsPage(trails: ActivitySummaryTrails) {
     }
 }
 
+/**
+ * „Nowe osiągnięcia”: przy pierwszym wejściu na planszę puchar „wskakuje”, a wiersze
+ * pojawiają się jeden po drugim. Po obrocie ekranu animacja się nie powtarza.
+ */
+@Composable
+private fun AchievementsPage(newAchievements: NewAchievements, isCurrent: Boolean) {
+    var revealed by rememberSaveable { mutableStateOf(false) }
+
+    LaunchedEffect(isCurrent) {
+        if (isCurrent) {
+            revealed = true
+        }
+    }
+
+    val iconScale by animateFloatAsState(
+        targetValue = if (revealed) 1f else 0.3f,
+        animationSpec = spring(dampingRatio = 0.4f, stiffness = Spring.StiffnessLow),
+        label = "achievementIcon"
+    )
+
+    SummaryPage(
+        icon = Icons.Outlined.EmojiEvents,
+        label = "Nowe osiągnięcia",
+        iconScale = iconScale
+    ) {
+        val rows =
+            newAchievements.achievements.map { achievement ->
+                Triple(achievementIcon(achievement.kind), achievement.kind.title, achievement.kind.description)
+            } +
+                newAchievements.records.map { record ->
+                    Triple(recordIcon(record.kind), "Rekord: " + recordValue(record), recordTitle(record.kind))
+                }
+
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(TatraSpacing.md)
+        ) {
+            rows.forEachIndexed { index, (icon, title, subtitle) ->
+                val delayMillis = 250 + index * 160
+
+                AnimatedVisibility(
+                    visible = revealed,
+                    enter = fadeIn(tween(durationMillis = 350, delayMillis = delayMillis)) +
+                        slideInVertically(tween(durationMillis = 350, delayMillis = delayMillis)) { it / 2 }
+                ) {
+                    AchievementRow(icon = icon, title = title, subtitle = subtitle)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun AchievementRow(icon: ImageVector, title: String, subtitle: String) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .size(48.dp)
+                .clip(CircleShape)
+                .background(TatraGreen),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = TatraWhite,
+                modifier = Modifier.size(26.dp)
+            )
+        }
+
+        Column(modifier = Modifier.padding(start = TatraSpacing.sm)) {
+            Text(
+                text = title,
+                color = TatraWhite,
+                style = MaterialTheme.typography.titleMedium
+            )
+
+            Text(
+                text = subtitle,
+                color = SummaryTextMuted,
+                style = MaterialTheme.typography.bodyMedium
+            )
+        }
+    }
+}
+
 @Composable
 private fun SharePage(
     activity: ActivityEntity,
@@ -457,6 +581,7 @@ private fun SharePage(
 private fun SummaryPage(
     icon: ImageVector,
     label: String,
+    iconScale: Float = 1f,
     content: @Composable () -> Unit
 ) {
     Column(
@@ -469,6 +594,7 @@ private fun SummaryPage(
     ) {
         Box(
             modifier = Modifier
+                .scale(iconScale)
                 .size(64.dp)
                 .clip(CircleShape)
                 .background(TatraGreen.copy(alpha = 0.18f)),

@@ -122,7 +122,7 @@ class TrailProgressRepository private constructor(
                 )
 
             // Przed ogłoszeniem wyniku, żeby podsumowanie wędrówki od razu widziało przyrost.
-            rememberProgress(result.completedFraction, activityIds.maxOrNull() ?: 0)
+            rememberProgress(result, activityIds.maxOrNull() ?: 0)
 
             _state.value =
                 TrailProgressState(
@@ -142,9 +142,14 @@ class TrailProgressRepository private constructor(
     }
 
     // Błąd zapisu nie może zepsuć samego postępu – najwyżej zabraknie przyrostu w podsumowaniu.
-    private suspend fun rememberProgress(fraction: Double, maxActivityId: Int) {
+    private suspend fun rememberProgress(result: TrailMatchResult, maxActivityId: Int) {
         try {
-            baselineStore.record(fraction, maxActivityId)
+            baselineStore.record(
+                fraction = result.completedFraction,
+                maxActivityId = maxActivityId,
+                completedTrailCount =
+                    result.trailProgress.count { it.completedFraction >= COMPLETED_TRAIL_THRESHOLD }
+            )
         } catch (error: IOException) {
             Log.w(LOG_TAG, "Nie udało się zapamiętać postępu na szlakach", error)
         }

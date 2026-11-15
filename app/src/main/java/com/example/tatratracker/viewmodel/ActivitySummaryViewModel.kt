@@ -4,6 +4,8 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
+import com.example.tatratracker.achievements.AchievementCalculator
+import com.example.tatratracker.achievements.NewAchievements
 import com.example.tatratracker.collection.CollectionCatalog
 import com.example.tatratracker.collection.CollectionCatalogAsset
 import com.example.tatratracker.collection.CollectionProgressCalculator
@@ -63,8 +65,11 @@ data class ActivitySummaryUiState(
     val activity: ActivityEntity? = null,
     val elevation: ActivitySummaryElevation? = null,
     val places: ActivitySummaryPlaces? = null,
-    val trails: ActivitySummaryTrails = ActivitySummaryTrails()
+    val trails: ActivitySummaryTrails = ActivitySummaryTrails(),
+    val newAchievements: NewAchievements = NO_ACHIEVEMENTS
 )
+
+private val NO_ACHIEVEMENTS = NewAchievements(achievements = emptyList(), records = emptyList())
 
 /**
  * Plansze podsumowania jednej wędrówki. Dane wędrówki czytane są raz; nowe miejsca
@@ -148,15 +153,51 @@ class ActivitySummaryViewModel(
             }
         }
 
+    // Osiągnięcia i rekordy, które przyniosła ta wędrówka; puste, dopóki nie ma czego pokazać.
+    private val newAchievements: Flow<NewAchievements> =
+        combine(
+            catalog,
+            activityDao.getAllActivities(),
+            savedPlaceRepository.observePlaces(),
+            savedPlaceRepository.observeVisits(),
+            combine(
+                trailProgressRepository.state,
+                baselineStore.baseline.catch { emit(TrailProgressBaseline()) }
+            ) { progress, baseline -> progress to baseline }
+        ) { catalog, activities, places, visits, (progress, baseline) ->
+            val activity = activities.firstOrNull { it.id == activityId }
+
+            if (activity == null) {
+                NO_ACHIEVEMENTS
+            } else {
+                AchievementCalculator.newForActivity(
+                    activity = activity,
+                    result =
+                        AchievementCalculator.calculate(
+                            activities = activities,
+                            places = places,
+                            visits = visits,
+                            catalog = catalog,
+                            completedTrailCount = progress.result?.let { progress.completedTrailCount }
+                        ),
+                    activities = activities,
+                    firstTrailCompleted =
+                        !progress.isLoading &&
+                            ActivitySummaryCalculator.firstTrailCompleted(baseline, activityId)
+                )
+            }
+        }.flowOn(Dispatchers.Default)
+
     val uiState: StateFlow<ActivitySummaryUiState> =
-        combine(activityPart, places, trails) { activityPart, places, trails ->
+        combine(activityPart, places, trails, newAchievements) { activityPart, places, trails, newAchievements ->
             ActivitySummaryUiState(
                 isLoading = activityPart.isLoading,
                 errorMessage = activityPart.errorMessage,
                 activity = activityPart.activity,
                 elevation = activityPart.elevation,
                 places = places,
-                trails = trails
+                trails = trails,
+                newAchievements = newAchievements
             )
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ActivitySummaryUiState())
 
