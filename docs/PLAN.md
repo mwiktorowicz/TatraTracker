@@ -21,7 +21,7 @@ Reguły dla wykonawcy:
 6. Nowy kod pisz w normalnym formatowaniu Kotlina (nie po jednym tokenie na linię, jak w istniejących plikach). Istniejących plików nie przeformatowuj bez osobnego zadania.
 7. Klucz `MAPTILER_API_KEY` jest w `local.properties` – nie wypisuj go i nie przenoś do repozytorium.
 
-## Aktualne zadanie: kolekcja szczytów i schronisk
+## Zakończone: kolekcja szczytów i schronisk
 
 **Cel:** ekran jak książeczka odznak: gotowe zestawy szczytów i schronisk, zdobyte w kolorze z datą pierwszego wejścia, niezdobyte szare. Punkt 19a. Trzecie zadanie pakietu interaktywnego. Zakres i decyzje zaakceptowane przez Miłosza 2026-11-15.
 
@@ -447,7 +447,7 @@ Zrobione: test i synchronizacja z Samsung Health (24), porządki na mapie (45–
 
 1. Odtwarzanie wędrówki – 57 (zrobione).
 2. Mapa odpowiada na dotyk – 22 + 59 (zrobione).
-3. Kolekcja szczytów i schronisk – 19a (trwa).
+3. Kolekcja szczytów i schronisk – 19a (zrobione).
 4. Podsumowanie po synchronizacji i odznaki – 58 + 19b.
 5. Nowy ekran główny: ostatnia wędrówka, postęp, cele na sezon, warunki na dziś – 23 + 19c + 18; razem z wybranym kierunkiem wyglądu, trybem ciemnym, ikoną i lżejszym tłem – 34, 27, 29, 30, 63. Makiety trzech kierunków: https://claude.ai/artifact/7hA1c3LnRDZDC4vqfevS5N (wybór kierunku jeszcze nie zapadł). Przy tym decyzja o przycisku „Rozpocznij" (11).
 6. Statystyki do klikania – 61 (+ 21).
@@ -512,3 +512,4 @@ Zrobione: test i synchronizacja z Samsung Health (24), porządki na mapie (45–
 - 2026-11-15 – kolekcja, krok 2: ekran (kod). `viewmodel/CollectionViewModel.kt` – katalog czytany raz z `assets/kolekcja.json`, łączony z `SavedPlaceRepository.observePlaces()` i `observeVisits()`; stan odświeża się po każdej zmianie w bazie; uszkodzony katalog = komunikat błędu zamiast pustego ekranu. `ui/CollectionScreen.kt` – nagłówek „Kolekcja", karta podsumowania („Zdobyto X z 81", pasek, zdanie o tym, co liczy się jako zdobycie), po karcie na zestaw: tytuł, licznik „5 z 7", opis, pasek, odznaki w rzędach po trzy (kółko z ikoną szczytu albo schroniska – zielone, gdy zdobyte, szare, gdy nie – nazwa, wysokość, data pierwszej wizyty). Dotknięcie odznaki: `TatraFeatureDialog` z rodzajem i wysokością, liczbą wizyt, datą pierwszej i (przy kilku wizytach) ostatniej albo „Jeszcze Cię tu nie było.". Trasa `collection_screen` w `Screen.kt` i `MainActivity.kt` (ekran podrzędny, jak „Ukończone szlaki"); w „Więcej" wiersz „Kolekcja – Zdobyte szczyty i schroniska" pod „Schroniska i punkty". Wspólny pasek postępu `ui/components/TatraProgressBar.kt`; karta szlaku na mapie (`MapTrailCard`) używa go zamiast własnej kopii. `assembleDebug` i wszystkie testy jednostkowe (118) przechodzą.
   - Ustalenia wykonawcy (do ewentualnej korekty): łączny licznik liczy różne miejsca (81), nie pozycje w zestawach (84). Zestawy są rozwinięte jeden pod drugim, bez zwijania; pozycje w kolejności od najwyższej. Data na odznace to pierwsza wizyta; dla miejsca dodanego ręcznie jest to dzień dodania. Zwykła lista przewijana (84 odznaki naraz), bez listy leniwej.
   - Nie testowane na telefonie: wszystko z sekcji „Test na telefonie"; w szczególności czy miejsca zapisane przez wcześniejsze importy łączą się z pozycjami katalogu (zwłaszcza schroniska i szczyty o dwóch nazwach), czytelność długich nazw schronisk w dwóch wierszach pod odznaką, płynność przewijania, wygląd szarych odznak.
+- 2026-11-15 – kolekcja przetestowana na telefonie przez Miłosza: działa; do listy pozycji bez uwag. Zadanie zamknięte; następne w pakiecie interaktywnym: podsumowanie po synchronizacji i odznaki (58 + 19b) – do rozpisania.
