@@ -16,6 +16,9 @@ class SavedPlaceRepository(
     /** Wszystkie zapisane miejsca; emituje ponownie po każdym dodaniu i usunięciu. */
     fun observePlaces(): Flow<List<SavedPlaceEntity>> = savedPlaceDao.getAllPlaces()
 
+    /** Wszystkie wizyty we wszystkich miejscach; emituje ponownie po imporcie aktywności. */
+    fun observeVisits(): Flow<List<PoiVisitEntity>> = savedPlaceDao.getAllVisits()
+
     /**
      * Zapisuje miejsce razem z ręczną wizytą (źródło MANUAL).
      * Zwraca id nowego miejsca albo błąd walidacji / zapisu.

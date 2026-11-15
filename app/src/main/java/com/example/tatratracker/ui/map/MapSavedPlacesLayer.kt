@@ -25,8 +25,11 @@ import org.maplibre.android.style.sources.GeoJsonSource
  * punktów mapy, które są samą ikoną.
  */
 
-private const val PROPERTY_NAME = "name"
-private const val PROPERTY_CATEGORY = "category"
+internal const val SAVED_PLACE_PROPERTY_NAME = "name"
+internal const val SAVED_PLACE_PROPERTY_CATEGORY = "category"
+
+// Zapisywany jako tekst: liczba typu Long mogłaby stracić dokładność w GeoJSON.
+internal const val SAVED_PLACE_PROPERTY_ID = "id"
 
 internal fun addSavedPlacesLayers(style: Style) {
     if (style.getSource(SAVED_PLACES_SOURCE_ID) == null) {
@@ -48,7 +51,7 @@ internal fun addSavedPlacesLayers(style: Style) {
     if (style.getLayer(SAVED_PLACE_SYMBOL_LAYER_ID) == null) {
         val iconByCategory =
             Expression.match(
-                Expression.get(PROPERTY_CATEGORY),
+                Expression.get(SAVED_PLACE_PROPERTY_CATEGORY),
                 Expression.literal(PIN_ICON_ID),
                 Expression.stop(SavedPlaceCategory.HUT, HUT_ICON_ID),
                 Expression.stop(SavedPlaceCategory.MOUNTAIN, PEAK_ICON_ID)
@@ -61,7 +64,7 @@ internal fun addSavedPlacesLayers(style: Style) {
                 PropertyFactory.iconSize(0.75f),
                 PropertyFactory.iconAllowOverlap(true),
                 PropertyFactory.iconIgnorePlacement(true),
-                PropertyFactory.textField(Expression.get(PROPERTY_NAME)),
+                PropertyFactory.textField(Expression.get(SAVED_PLACE_PROPERTY_NAME)),
                 PropertyFactory.textSize(12.5f),
                 PropertyFactory.textColor(TatraDark.toArgb()),
                 PropertyFactory.textHaloColor(Color.WHITE),
@@ -92,8 +95,9 @@ internal fun savedPlacesToGeoJson(places: List<SavedPlaceEntity>): String {
 
         val properties =
             JSONObject()
-                .put(PROPERTY_NAME, place.name)
-                .put(PROPERTY_CATEGORY, place.category)
+                .put(SAVED_PLACE_PROPERTY_ID, place.id.toString())
+                .put(SAVED_PLACE_PROPERTY_NAME, place.name)
+                .put(SAVED_PLACE_PROPERTY_CATEGORY, place.category)
 
         features.put(
             JSONObject()

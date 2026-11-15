@@ -21,6 +21,31 @@ Reguły dla wykonawcy:
 6. Nowy kod pisz w normalnym formatowaniu Kotlina (nie po jednym tokenie na linię, jak w istniejących plikach). Istniejących plików nie przeformatowuj bez osobnego zadania.
 7. Klucz `MAPTILER_API_KEY` jest w `local.properties` – nie wypisuj go i nie przenoś do repozytorium.
 
+## Aktualne zadanie: mapa odpowiada na dotyk
+
+**Cel:** dotknięcie punktu albo szlaku na mapie głównej pokazuje, co to jest i co Miłosz ma z tym wspólnego, oraz pozwala od razu zacząć planowanie trasy. Punkty 22 i 59. Drugie zadanie pakietu interaktywnego. Zakres zaakceptowany przez Miłosza 2026-11-15; dwie części, każda z osobnym testem i commitem.
+
+**Stan zastany:** mapa reaguje na dotyk tylko w trybie „wskaż na mapie" przy planowaniu trasy. Szczyty, schroniska, jaskinie i stawy pochodzą z kafli MapTiler (nazwa, szczyty także `ele`). Wizyty są w `poi_visits`, powiązane z `saved_places` (zapisuje je `ActivityPoiDetector`). Linia szlaku pochodzi z kafli, a postęp przejścia liczy `TrailMatcher` z lokalnego `tatry_szlaki.geojson`, per nazwa szlaku.
+
+### Część A – punkty
+
+1. Dotknięcie szczytu, schroniska, jaskini, stawu albo „mojego punktu" otwiera kartę na dole mapy: nazwa, rodzaj, wysokość (gdy jest w danych).
+2. Wizyty na karcie: liczba i data ostatniej albo informacja, że wizyt jeszcze nie ma. Dopasowanie do zapisanych miejsc tą samą regułą (nazwa i położenie), której używa import aktywności – wspólny kod, bez kopii.
+3. Przyciski „Prowadź tutaj" (punkt jako cel) i „Trasa stąd" (punkt jako start): otwierają panel planowania z punktem wpisanym pod swoją nazwą.
+4. Wybrany punkt jest podświetlony; dotknięcie pustego miejsca albo „X" zamyka kartę.
+5. Tryb „wskaż na mapie" w planowaniu działa jak dotąd i ma pierwszeństwo.
+
+### Część B – szlaki
+
+1. Dotknięcie linii szlaku otwiera kartę: kolor, nazwa, długość, procent przejścia z paskiem postępu.
+2. Dotknięty szlak jest podświetlony na całej długości.
+3. Gdy w miejscu dotknięcia jest punkt i szlak, wygrywa punkt.
+4. Decyzja Miłosza: szlak łączony z postępem po położeniu (najbliższy odcinek w `tatry_szlaki.geojson`), nie po nazwie z kafla. Postęp liczy się dopiero po pierwszym dotknięciu szlaku; w trakcie „Liczę postęp…".
+
+**Poza zakresem:** pozycja użytkownika jako start (punkt 13), pełny ekran szczegółów miejsca, edycja i usuwanie punktów z karty, kolekcja szczytów (19a).
+
+**Test na telefonie (Miłosz), część A:** dotknięcie szczytu pokazuje kartę z nazwą i wysokością; szczyt lub schronisko z wędrówki z 06.11 ma wizyty z datą, a miejsce, w którym Cię nie było – „Jeszcze Cię tu nie było"; „mój punkt" otwiera kartę ze swoją nazwą; „Prowadź tutaj" otwiera planowanie z celem, „Trasa stąd" ze startem, a wyznaczona trasa prowadzi do tego punktu; pierścień wokół wybranego punktu znika po zamknięciu karty; dotknięcie pustego miejsca zamyka kartę; „wskaż na mapie" w planowaniu działa jak wcześniej; karta nie zasłania logo, napisu o autorach ani przycisku „Pokaż całe Tatry"; to samo na podkładzie „Satelita".
+
 ## Zakończone: odtwarzanie wędrówki
 
 **Cel:** wędrówkę da się obejrzeć jak film: znacznik jedzie po trasie na mapie, razem z nim przesuwa się punkt na profilu wysokości i zmieniają się odczyty. Punkt 57. Pierwsze zadanie „pakietu interaktywnego" (patrz „Proponowana kolejność").
@@ -399,7 +424,7 @@ Zrobione: test i synchronizacja z Samsung Health (24), porządki na mapie (45–
 **Pakiet interaktywny** (decyzja Miłosza 2026-11-14: aplikacja ma być ciekawsza i reagować, nie tylko ładniej wyglądać; robimy po kolei):
 
 1. Odtwarzanie wędrówki – 57 (zrobione).
-2. Mapa odpowiada na dotyk – 22 + 59.
+2. Mapa odpowiada na dotyk – 22 + 59 (trwa: część A – punkty, część B – szlaki).
 3. Kolekcja szczytów i schronisk – 19a.
 4. Podsumowanie po synchronizacji i odznaki – 58 + 19b.
 5. Nowy ekran główny: ostatnia wędrówka, postęp, cele na sezon, warunki na dziś – 23 + 19c + 18; razem z wybranym kierunkiem wyglądu, trybem ciemnym, ikoną i lżejszym tłem – 34, 27, 29, 30, 63. Makiety trzech kierunków: https://claude.ai/artifact/7hA1c3LnRDZDC4vqfevS5N (wybór kierunku jeszcze nie zapadł). Przy tym decyzja o przycisku „Rozpocznij" (11).
@@ -452,3 +477,6 @@ Zrobione: test i synchronizacja z Samsung Health (24), porządki na mapie (45–
   - Ustalenia wykonawcy (do ewentualnej korekty): „ten sam podkład z tymi samymi korektami czytelności" rozumiany jako styl + nasze warstwy Tatr według zapisanych przełączników (Miłosz nie zgłosił uwag do tej interpretacji w planie). Wysokość w odczycie pochodzi z punktu (surowa), kursor na profilu z profilu wygładzonego – mogą się różnić o kilka metrów. Prędkość 0 zapisana w punkcie liczy się jako wartość, a `TatraFormat.speed` pokazuje zero jako „Brak danych". Na postoju godzina przeskakuje (postęp liczony po dystansie). Ślad bez wysokości: zamiast profilu krótki napis, znacznika nie da się wtedy przesuwać palcem. Dokładność przesuwania po profilu ok. 1/600 długości trasy (najbliższa próbka).
   - Nie testowane na telefonie: wszystko z sekcji „Test na telefonie" zadania, w szczególności płynność na Galaxy A52s (aktualizacje mapy co klatkę), czy filtr 8 m wystarcza na postojach z Fit3, „Śledź" przy przybliżaniu palcami, czytelność kolorów śladu i znacznika na „Satelita", wygląd panelu na wąskim ekranie i w poziomie.
 - 2026-11-15 – odtwarzanie wędrówki przetestowane na telefonie przez Miłosza: działa (wszystkie punkty z sekcji „Test na telefonie"). Zadanie zamknięte; następne w pakiecie interaktywnym: „mapa odpowiada na dotyk" (22 + 59) – do rozpisania.
+- 2026-11-15 – mapa odpowiada na dotyk, część A – punkty (kod). Zakres i decyzje Miłosza: dwa przyciski na karcie („Prowadź tutaj", „Trasa stąd"), najpierw część A, potem B. (1) Wspólna reguła dopasowania: `poi/PoiPlaceMatcher.kt` – `normalizeName`, `findPlace` (ta sama nazwa do 500 m albo dowolna do 60 m, opcjonalnie w obrębie kategorii), `visitInfo` (liczba wizyt i data ostatniej), `distanceMeters`. `ActivityPoiDetector.findExistingPlace` i `normalizeName` wołają teraz tę regułę (te same progi i ten sam wzór odległości; usunięta prywatna kopia i stała `EXISTING_PLACE_POSITION_TOLERANCE_METERS`). Testy `poi/PoiPlaceMatcherTest` (12). (2) Wybór punktu: `ui/map/MapPoiSelection.kt` – `findTappedPoi` pyta mapę o obiekty w kwadracie 36 × 36 dp wokół dotknięcia w warstwach ikon i etykiet szczytów, schronisk, jaskiń, stawów oraz „moich punktów" (tylko widoczne warstwy) i bierze najbliższy; wysokość z pola `ele` kafla. „Mój punkt" leżący na szczycie albo schronisku mapy (tak zapisuje je import) jest pokazywany jako ten punkt mapy, z wysokością, ale z wizytami zapisanego miejsca. Pierścień wokół wybranego punktu: dwie warstwy `CircleLayer` (biała obwódka + zielony pierścień), nad punktami mapy, pod znacznikami trasy; wraca po zmianie podkładu. `MapSavedPlacesLayer`: do danych warstwy doszło pole `id`. (3) Karta `ui/map/MapPoiCard.kt`: ikona rodzaju, nazwa (bez nazwy – nazwa rodzaju), podpis „Szczyt · 1987 m n.p.m." / „Mój punkt · Inne", wiersz wizyt, przyciski, „X". (4) `MapScreen`: stan `selectedPoi`; słuchacz dotknięcia aktywny, gdy panel planowania jest zamknięty; dotknięcie punktu zamyka panel „Warstwy", a punkt z dolnych 45% ekranu jest przesuwany na środek, żeby nie schował się pod kartą; dotknięcie pustego miejsca zamyka kartę. „Prowadź tutaj" / „Trasa stąd": `setPoint` na cel / start pod nazwą punktu, kasuje wyznaczoną trasę (jak każda zmiana punktu), otwiera panel planowania na średniej wysokości. Karta 74 dp nad dolną krawędzią – nad logo, napisem o autorach i „Pokaż całe Tatry". Wizyty: `MapViewModel.poiVisits` (`SavedPlaceRepository.observeVisits`), karta odświeża się po imporcie. `assembleDebug` i wszystkie testy jednostkowe (107) przechodzą.
+  - Ustalenia wykonawcy (do ewentualnej korekty): tekst wizyt w formie bezosobowej – „Twoje wizyty: 3 · ostatnia 06.11.2026" i „Jeszcze Cię tu nie było" (w propozycji było „Byłeś tu 3 razy"). Jaskinie i stawy bez zapisanego miejsca nie mają wiersza o wizytach, bo import ich nie wykrywa i „nie było Cię tu" bywałoby nieprawdą. „Moje punkty" dodane ręcznie mają 1 wizytę z dnia dodania (tak zapisuje je aplikacja od początku; tak samo pokazuje ekran „Schroniska i punkty"). Przy otwartym panelu planowania dotknięcie punktu nie otwiera karty; „wskaż na mapie" nadal wpisuje współrzędne, także gdy palec trafi w szczyt – użycie nazwy punktu w tym trybie byłoby osobną zmianą. Zmiana przełącznika warstwy przy otwartej karcie nie zamyka karty. Nazwa punktu z pola `name` kafla (to samo, co widać na mapie).
+  - Nie testowane na telefonie: wszystko z sekcji „Test na telefonie", część A; w szczególności czy palec łatwo trafia w ikonę i w etykietę (promień 18 dp), czy kafle podają `ele` dla szczytów i jakie nazwy mają stawy, czy wizyty z importu łączą się z punktami mapy (różnice nazw między OSM/Overpass a kaflami MapTiler), wygląd pierścienia na obu podkładach, wysokość karty na wąskim ekranie (dwa przyciski obok siebie).

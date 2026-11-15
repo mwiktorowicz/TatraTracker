@@ -7,6 +7,7 @@ import com.example.tatratracker.data.AppDatabase
 import com.example.tatratracker.data.AppSettings
 import com.example.tatratracker.data.AppSettingsStore
 import com.example.tatratracker.data.MapLayerSettingsStore
+import com.example.tatratracker.data.PoiVisitEntity
 import com.example.tatratracker.data.SavedPlaceCategory
 import com.example.tatratracker.data.SavedPlaceEntity
 import com.example.tatratracker.data.SavedPlaceRepository
@@ -84,6 +85,12 @@ class MapViewModel(
     val savedPlaces: StateFlow<List<SavedPlaceEntity>> =
         savedPlaceRepository
             .observePlaces()
+            .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
+    /** Wizyty w zapisanych miejscach – do karty punktu dotkniętego na mapie. */
+    val poiVisits: StateFlow<List<PoiVisitEntity>> =
+        savedPlaceRepository
+            .observeVisits()
             .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     // Samo pobranie repozytorium uruchamia kosztowne dopasowanie śladów,

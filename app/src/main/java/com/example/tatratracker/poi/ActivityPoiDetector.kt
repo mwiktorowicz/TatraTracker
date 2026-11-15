@@ -13,7 +13,6 @@ import java.net.HttpURLConnection
 import java.net.URL
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
-import java.text.Normalizer
 import java.util.Locale
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -1163,101 +1162,21 @@ class ActivityPoiDetector(
         return result
     }
 
+    // Reguła wspólna z kartą punktu na mapie – patrz PoiPlaceMatcher.
     private fun findExistingPlace(
         candidate: PoiCandidate,
         places: List<SavedPlaceEntity>
     ): SavedPlaceEntity? {
-
-        val candidateName =
-            normalizeName(
-                candidate.name
-            )
-
-        return places
-            .map { place ->
-
-                val distance =
-                    haversineMeters(
-                        latitude1 =
-                            candidate.latitude,
-                        longitude1 =
-                            candidate.longitude,
-                        latitude2 =
-                            place.latitude,
-                        longitude2 =
-                            place.longitude
-                    )
-
-                place to distance
-            }
-            .filter { pair ->
-
-                val place =
-                    pair.first
-
-                val distance =
-                    pair.second
-
-                val sameName =
-                    candidateName ==
-                            normalizeName(
-                                place.name
-                            )
-
-                candidate.category ==
-                        place.category &&
-                        (
-                                (
-                                        sameName &&
-                                                distance <=
-                                                500.0
-                                        ) ||
-                                        distance <=
-                                        EXISTING_PLACE_POSITION_TOLERANCE_METERS
-                                )
-            }
-            .minByOrNull {
-                it.second
-            }
-            ?.first
+        return PoiPlaceMatcher.findPlace(
+            name = candidate.name,
+            category = candidate.category,
+            latitude = candidate.latitude,
+            longitude = candidate.longitude,
+            places = places
+        )
     }
 
-    private fun normalizeName(
-        value: String
-    ): String {
-
-        val lower =
-            value
-                .trim()
-                .lowercase(
-                    Locale.ROOT
-                )
-                .replace(
-                    "ł",
-                    "l"
-                )
-
-        val withoutAccents =
-            Normalizer
-                .normalize(
-                    lower,
-                    Normalizer.Form.NFD
-                )
-                .replace(
-                    Regex(
-                        "\\p{Mn}+"
-                    ),
-                    ""
-                )
-
-        return withoutAccents
-            .replace(
-                Regex(
-                    "[^a-z0-9]+"
-                ),
-                ""
-            )
-    }
+    private fun normalizeName(value: String): String = PoiPlaceMatcher.normalizeName(value)
 
     /*
      * =====================================================
@@ -1477,9 +1396,6 @@ class ActivityPoiDetector(
 
         private const val PASS_VISIT_DISTANCE_METERS =
             65.0
-
-        private const val EXISTING_PLACE_POSITION_TOLERANCE_METERS =
-            60.0
     }
 }
 

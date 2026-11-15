@@ -25,6 +25,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -38,6 +39,7 @@ import com.example.tatratracker.ui.map.AddOwnPlaceDialog
 import com.example.tatratracker.ui.map.MapBasemap
 import com.example.tatratracker.ui.map.MapDataAttribution
 import com.example.tatratracker.ui.map.MapLayersPanel
+import com.example.tatratracker.ui.map.MapPoiCard
 import com.example.tatratracker.ui.map.MapRoundButton
 import com.example.tatratracker.ui.map.MapRouteQuickActions
 import com.example.tatratracker.ui.map.MapSearchRepository
@@ -56,10 +58,13 @@ import com.example.tatratracker.ui.map.RoutePlanningPanel
 import com.example.tatratracker.ui.map.RoutePlanningState
 import com.example.tatratracker.ui.map.RoutePointInput
 import com.example.tatratracker.ui.map.RouteRoutingRepository
+import com.example.tatratracker.ui.map.RouteTarget
 import com.example.tatratracker.ui.map.SavePlannedRouteDialog
+import com.example.tatratracker.ui.map.SelectedMapPoi
 import com.example.tatratracker.ui.map.TATRA_CENTER
 import com.example.tatratracker.ui.map.addElevationMarkerLayers
 import com.example.tatratracker.ui.map.addPlannedRouteLayers
+import com.example.tatratracker.ui.map.addPoiSelectionLayers
 import com.example.tatratracker.ui.map.addRouteSelectionLayers
 import com.example.tatratracker.ui.map.addTatraMapLayers
 import com.example.tatratracker.ui.map.addWaypoint
@@ -67,13 +72,16 @@ import com.example.tatratracker.ui.map.applyMapLayerVisibility
 import com.example.tatratracker.ui.map.applySatelliteReadability
 import com.example.tatratracker.ui.map.basemapStyleUrl
 import com.example.tatratracker.ui.map.clearPoint
+import com.example.tatratracker.ui.map.findTappedPoi
 import com.example.tatratracker.ui.map.inputFor
+import com.example.tatratracker.ui.map.poiVisitInfoFor
 import com.example.tatratracker.ui.map.removeWaypoint
 import com.example.tatratracker.ui.map.restoreCameraIfReset
 import com.example.tatratracker.ui.map.routePointFromMap
 import com.example.tatratracker.ui.map.setPoint
 import com.example.tatratracker.ui.map.updateElevationMarker
 import com.example.tatratracker.ui.map.updatePlannedRoute
+import com.example.tatratracker.ui.map.updatePoiSelection
 import com.example.tatratracker.ui.map.updateQuery
 import com.example.tatratracker.ui.map.updateRouteSelection
 import com.example.tatratracker.ui.map.updateSavedPlaces
@@ -183,6 +191,11 @@ fun MapScreen(
     // Warstwy „Przebyte szlaki” i „Moje punkty”.
     val walkedTrails by mapViewModel.walkedTrails.collectAsState()
     val savedPlaces by mapViewModel.savedPlaces.collectAsState()
+
+    // Punkt wybrany dotknięciem mapy (karta na dole ekranu) i wizyty do tej karty.
+    val poiVisits by mapViewModel.poiVisits.collectAsState()
+    var selectedPoi by remember { mutableStateOf<SelectedMapPoi?>(null) }
+    val poiTapRadiusPx = with(LocalDensity.current) { 18.dp.toPx() }
 
     var isImportingGpx by remember { mutableStateOf(false) }
 
@@ -650,6 +663,9 @@ fun MapScreen(
                     tracks
             )
 
+            // Pierścień wybranego punktu: nad punktami mapy, pod znacznikami trasy.
+            addPoiSelectionLayers(style)
+
             addRouteSelectionLayers(
                 style
             )
@@ -702,6 +718,80 @@ fun MapScreen(
             mapLoading =
                 false
         }
+    }
+
+    // Dotknięcie mapy przy zamkniętym panelu planowania: wybór punktu albo zamknięcie karty.
+    // Przy otwartym panelu mapa na dotyk nie reaguje, poza wskazywaniem punktu trasy,
+    // które obsługuje osobny słuchacz niżej.
+    DisposableEffect(mapLibreMap, showRoutePlanner) {
+        val map = mapLibreMap
+
+        if (map == null || showRoutePlanner) {
+            onDispose {}
+        } else {
+            val listener =
+                MapLibreMap.OnMapClickListener { point ->
+                    val poi =
+                        if (loadedStyle == null) {
+                            null
+                        } else {
+                            findTappedPoi(map, point, poiTapRadiusPx)
+                        }
+
+                    selectedPoi = poi
+
+                    if (poi != null) {
+                        showLayersPanel = false
+
+                        // Punkt z dolnej części ekranu schowałby się pod kartą.
+                        val screenY = map.projection.toScreenLocation(poi.position).y
+
+                        if (screenY > mapView.height * 0.55f) {
+                            map.animateCamera(CameraUpdateFactory.newLatLng(poi.position))
+                        }
+                    }
+
+                    poi != null
+                }
+
+            map.addOnMapClickListener(listener)
+
+            onDispose {
+                map.removeOnMapClickListener(listener)
+            }
+        }
+    }
+
+    LaunchedEffect(showRoutePlanner) {
+        if (showRoutePlanner) {
+            selectedPoi = null
+        }
+    }
+
+    LaunchedEffect(selectedPoi, loadedStyle) {
+        val style = loadedStyle ?: return@LaunchedEffect
+        updatePoiSelection(style, selectedPoi)
+    }
+
+    val selectedPoiVisits =
+        remember(selectedPoi, savedPlaces, poiVisits) {
+            selectedPoi?.let { poi -> poiVisitInfoFor(poi, savedPlaces, poiVisits) }
+        }
+
+    // „Prowadź tutaj” i „Trasa stąd”: punkt trafia do planowania trasy pod swoją nazwą.
+    fun startRoutePlanningAt(poi: SelectedMapPoi, target: RouteTarget) {
+        invalidateCalculatedRoute()
+
+        routePlanningState =
+            routePlanningState.setPoint(
+                target = target,
+                point = RoutePlanPoint(name = poi.displayName, position = poi.position)
+            )
+
+        selectedPoi = null
+        showLayersPanel = false
+        showRoutePlanner = true
+        routeSheetLevel = RoutePlannerSheetLevel.MEDIUM
     }
 
     // Pierwszy styl dopiero po odczycie zapisanego podkładu, potem przy każdej jego zmianie.
@@ -1177,6 +1267,22 @@ fun MapScreen(
         MapDataAttribution(
             modifier = Modifier.align(Alignment.BottomEnd)
         )
+
+        // Karta nad logo, napisem o autorach danych i przyciskiem „Pokaż całe Tatry”.
+        selectedPoi?.let { poi ->
+            if (!showRoutePlanner) {
+                MapPoiCard(
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(start = 14.dp, end = 14.dp, bottom = 74.dp),
+                    poi = poi,
+                    visitInfo = selectedPoiVisits,
+                    onNavigateHere = { startRoutePlanningAt(poi, RouteTarget.End) },
+                    onRouteFromHere = { startRoutePlanningAt(poi, RouteTarget.Start) },
+                    onClose = { selectedPoi = null }
+                )
+            }
+        }
 
         MapRoundButton(
             modifier =
