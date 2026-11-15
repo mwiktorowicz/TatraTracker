@@ -1,0 +1,75 @@
+package com.example.tatratracker.viewmodel
+
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.viewModelScope
+import com.example.tatratracker.collection.CollectionCatalog
+import com.example.tatratracker.collection.CollectionCatalogParser
+import com.example.tatratracker.collection.CollectionProgress
+import com.example.tatratracker.collection.CollectionProgressCalculator
+import com.example.tatratracker.data.AppDatabase
+import com.example.tatratracker.data.SavedPlaceRepository
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.stateIn
+
+data class CollectionUiState(
+    val isLoading: Boolean = true,
+    val progress: CollectionProgress? = null,
+    val errorMessage: String? = null
+)
+
+/**
+ * Ekran „Kolekcja”: katalog z pliku aplikacji zestawiony z zapisanymi miejscami
+ * i wizytami. Stan odświeża się sam po każdej zmianie w bazie (import, synchronizacja,
+ * ręczne dodanie miejsca).
+ */
+class CollectionViewModel(
+    application: Application
+) : AndroidViewModel(application) {
+
+    private val savedPlaceRepository = SavedPlaceRepository(AppDatabase.getDatabase(application))
+
+    private val catalog: Flow<CollectionCatalog> =
+        flow {
+            val json =
+                application.assets
+                    .open(CATALOG_ASSET)
+                    .bufferedReader(Charsets.UTF_8)
+                    .use { reader -> reader.readText() }
+
+            emit(CollectionCatalogParser.parse(json))
+        }.flowOn(Dispatchers.IO)
+
+    val uiState: StateFlow<CollectionUiState> =
+        combine(
+            catalog,
+            savedPlaceRepository.observePlaces(),
+            savedPlaceRepository.observeVisits()
+        ) { catalog, places, visits ->
+            CollectionUiState(
+                isLoading = false,
+                progress = CollectionProgressCalculator.calculate(catalog, places, visits)
+            )
+        }
+            .flowOn(Dispatchers.Default)
+            .catch { error ->
+                emit(
+                    CollectionUiState(
+                        isLoading = false,
+                        errorMessage = error.message ?: "Nie udało się wczytać kolekcji."
+                    )
+                )
+            }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), CollectionUiState())
+
+    private companion object {
+        const val CATALOG_ASSET = "kolekcja.json"
+    }
+}

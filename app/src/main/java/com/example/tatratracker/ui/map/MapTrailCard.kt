@@ -7,9 +7,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
@@ -32,15 +30,14 @@ import com.example.tatratracker.data.COMPLETED_TRAIL_THRESHOLD
 import com.example.tatratracker.data.TrailInfo
 import com.example.tatratracker.data.TrailNameProgress
 import com.example.tatratracker.data.TrailProgressState
+import com.example.tatratracker.ui.components.TatraProgressBar
 import com.example.tatratracker.ui.format.TatraFormat
 import com.example.tatratracker.ui.formatPercent
 import com.example.tatratracker.ui.theme.TatraDark
-import com.example.tatratracker.ui.theme.TatraGreen
 import com.example.tatratracker.ui.theme.TatraGreenVerySoft
 import com.example.tatratracker.ui.theme.TatraOutline
 import com.example.tatratracker.ui.theme.TatraSpacing
 import com.example.tatratracker.ui.theme.TatraSurface
-import com.example.tatratracker.ui.theme.TatraSurfaceStrong
 import com.example.tatratracker.ui.theme.TatraTextMuted
 
 // Najwyżej tyle innych szlaków z tego samego odcinka mieści się na karcie.
@@ -177,7 +174,7 @@ private fun TrailProgressSection(
             progress != null -> {
                 val fraction = progress.completedFraction.coerceIn(0.0, 1.0)
 
-                TrailProgressBar(fraction = fraction.toFloat())
+                TatraProgressBar(fraction = fraction.toFloat())
 
                 Text(
                     text = progressText(progress, fraction),
@@ -219,26 +216,6 @@ private fun progressText(progress: TrailNameProgress, fraction: Double): String 
         "Przejście: $percent · $lengths · ukończony"
     } else {
         "Przejście: $percent · $lengths"
-    }
-}
-
-@Composable
-private fun TrailProgressBar(fraction: Float) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(8.dp)
-            .clip(RoundedCornerShape(4.dp))
-            .background(TatraSurfaceStrong)
-    ) {
-        if (fraction > 0f) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth(fraction)
-                    .fillMaxHeight()
-                    .background(TatraGreen)
-            )
-        }
     }
 }
 

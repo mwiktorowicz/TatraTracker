@@ -25,6 +25,7 @@ import com.example.tatratracker.ui.AboutScreen
 import com.example.tatratracker.ui.ActivityDetailsScreen
 import com.example.tatratracker.ui.ActivityReplayScreen
 import com.example.tatratracker.ui.BackupScreen
+import com.example.tatratracker.ui.CollectionScreen
 import com.example.tatratracker.ui.CompletedTrailsScreen
 import com.example.tatratracker.ui.DataExportScreen
 import com.example.tatratracker.ui.HistoryScreen
@@ -85,6 +86,7 @@ private fun TatraTrackerApp() {
             Screen.MyRoutes.route,
             Screen.CompletedTrails.route,
             Screen.SavedPlaces.route,
+            Screen.Collection.route,
             Screen.OfflineMaps.route,
             Screen.Settings.route,
             Screen.DataExport.route,
@@ -282,6 +284,9 @@ private fun TatraTrackerApp() {
                                 .route
                         )
                     },
+                    onCollectionClick = {
+                        navController.navigate(Screen.Collection.route)
+                    },
                     onOfflineMapsClick = {
 
                         navController.navigate(
@@ -379,6 +384,12 @@ private fun TatraTrackerApp() {
                                 Screen.Map.route
                         )
                     }
+                )
+            }
+
+            composable(route = Screen.Collection.route) {
+                CollectionScreen(
+                    onBack = { navController.popBackStack() }
                 )
             }
 

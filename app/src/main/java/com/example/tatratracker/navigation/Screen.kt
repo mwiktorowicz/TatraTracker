@@ -40,6 +40,9 @@ sealed class Screen(
         "saved_places_screen"
     )
 
+    // Kolekcja szczytów i schronisk (Więcej → „Kolekcja”).
+    object Collection : Screen("collection_screen")
+
     object OfflineMaps : Screen(
         "offline_maps_screen"
     )

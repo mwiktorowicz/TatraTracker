@@ -14,6 +14,7 @@ import androidx.compose.material.icons.outlined.Backup
 import androidx.compose.material.icons.outlined.DownloadForOffline
 import androidx.compose.material.icons.outlined.FileUpload
 import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.EmojiEvents
 import androidx.compose.material.icons.outlined.Landscape
 import androidx.compose.material.icons.outlined.Map
 import androidx.compose.material.icons.outlined.Place
@@ -42,6 +43,7 @@ fun MoreScreen(
     onMyRoutesClick: () -> Unit,
     onCompletedTrailsClick: () -> Unit,
     onSavedPlacesClick: () -> Unit,
+    onCollectionClick: () -> Unit,
     onOfflineMapsClick: () -> Unit,
     onSettingsClick: () -> Unit,
     onDataExportClick: () -> Unit,
@@ -117,6 +119,13 @@ fun MoreScreen(
                         subtitle = "Ulubione miejsca i zapisane POI",
                         icon = Icons.Outlined.Place,
                         onClick = onSavedPlacesClick
+                    )
+
+                    TatraListRow(
+                        title = "Kolekcja",
+                        subtitle = "Zdobyte szczyty i schroniska",
+                        icon = Icons.Outlined.EmojiEvents,
+                        onClick = onCollectionClick
                     )
                 }
             }
