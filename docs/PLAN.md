@@ -21,6 +21,34 @@ Reguły dla wykonawcy:
 6. Nowy kod pisz w normalnym formatowaniu Kotlina (nie po jednym tokenie na linię, jak w istniejących plikach). Istniejących plików nie przeformatowuj bez osobnego zadania.
 7. Klucz `MAPTILER_API_KEY` jest w `local.properties` – nie wypisuj go i nie przenoś do repozytorium.
 
+## Aktualne zadanie: podsumowanie po synchronizacji i odznaki
+
+**Cel:** po synchronizacji aplikacja pokazuje, co przyniosła wędrówka – przesuwane plansze na pełnym ekranie, obrazek do udostępnienia, potem odznaki i rekordy. Punkty 58 + 19b. Czwarte zadanie pakietu interaktywnego. Zakres i decyzje zaakceptowane przez Miłosza 2026-11-15; kolejność A → B → C, każda część osobno testowana i commitowana.
+
+### Część A – plansze podsumowania (kod gotowy, czeka na test)
+
+- Cztery plansze jednej wędrówki: „Wędrówka" (nazwa, data, dystans, czas całkowity i w ruchu), „Wysokość" (najwyższy punkt, podejścia, zejścia), „Nowe miejsca" (szczyty i schroniska odwiedzone po raz pierwszy + stan kolekcji „14 z 81"), „Szlaki" (procent sieci szlaków i przyrost).
+- Wejście: komunikat po synchronizacji ma akcję „Zobacz" (bez samoczynnego otwierania); w szczegółach aktywności przycisk „Podsumowanie wędrówki". Kilka wędrówek w jednej synchronizacji → podsumowanie najpóźniej rozpoczętej.
+- Przyrost na szlakach: aplikacja pamięta ostatnio policzony procent i pokazuje różnicę; w trakcie liczenia „Liczę postęp…"; bez punktu odniesienia – sam procent.
+
+**Test na telefonie (część A):**
+1. Szczegóły dowolnej aktywności → „Podsumowanie wędrówki": cztery plansze, przesuwanie palcem i przyciskiem „Dalej", kropki, „X" i „Zamknij" na ostatniej.
+2. Plansza „Wędrówka" i „Wysokość": liczby zgodne ze szczegółami aktywności (dystans, czasy, podejścia, zejścia, najwyższy punkt).
+3. „Nowe miejsca" dla wędrówki, która jako pierwsza była na jakimś szczycie lub w schronisku: lista nazw i licznik kolekcji zgodny z ekranem „Kolekcja"; dla wędrówki po znanych miejscach – zdanie o braku nowych.
+4. „Szlaki": najpierw „Liczę postęp…", potem procent zgodny z „Ukończonymi szlakami".
+5. Nowa wędrówka z Samsung Health: komunikat „Zaimportowano 1 aktywność" z akcją „Zobacz" → podsumowanie tej wędrówki; na planszy „Szlaki" przyrost („+… km nowych szlaków") – o ile aplikacja wcześniej choć raz policzyła postęp (patrz ustalenia w dzienniku).
+6. Synchronizacja ręczna z ekranu importu: ten sam komunikat z „Zobacz".
+
+### Część B – obrazek do udostępnienia (do zrobienia)
+
+Ostatnia plansza zbiera najważniejsze liczby na karcie z przyciskiem „Udostępnij" → obrazek do systemowego okna udostępniania.
+
+### Część C – odznaki i rekordy, 19b (do zrobienia)
+
+Osiągnięcia liczone z danych, bez nowej tabeli (pierwszy szczyt powyżej 2000 m; 5 / 10 / 25 szczytów; pierwsze schronisko; wszystkie polskie schroniska; 100 km w roku; pierwszy ukończony szlak; rekord dystansu; rekord wysokości); sekcja „Osiągnięcia" na ekranie „Kolekcja"; plansza „Nowe osiągnięcia" z krótką animacją.
+
+**Poza zakresem:** cele na sezon (19c), podsumowanie po imporcie z pliku, powiadomienia systemowe, własne osiągnięcia użytkownika.
+
 ## Zakończone: kolekcja szczytów i schronisk
 
 **Cel:** ekran jak książeczka odznak: gotowe zestawy szczytów i schronisk, zdobyte w kolorze z datą pierwszego wejścia, niezdobyte szare. Punkt 19a. Trzecie zadanie pakietu interaktywnego. Zakres i decyzje zaakceptowane przez Miłosza 2026-11-15.
@@ -448,7 +476,7 @@ Zrobione: test i synchronizacja z Samsung Health (24), porządki na mapie (45–
 1. Odtwarzanie wędrówki – 57 (zrobione).
 2. Mapa odpowiada na dotyk – 22 + 59 (zrobione).
 3. Kolekcja szczytów i schronisk – 19a (zrobione).
-4. Podsumowanie po synchronizacji i odznaki – 58 + 19b.
+4. Podsumowanie po synchronizacji i odznaki – 58 + 19b (trwa; część A – kod gotowy).
 5. Nowy ekran główny: ostatnia wędrówka, postęp, cele na sezon, warunki na dziś – 23 + 19c + 18; razem z wybranym kierunkiem wyglądu, trybem ciemnym, ikoną i lżejszym tłem – 34, 27, 29, 30, 63. Makiety trzech kierunków: https://claude.ai/artifact/7hA1c3LnRDZDC4vqfevS5N (wybór kierunku jeszcze nie zapadł). Przy tym decyzja o przycisku „Rozpocznij" (11).
 6. Statystyki do klikania – 61 (+ 21).
 7. Propozycja następnej wędrówki – 60.
@@ -513,3 +541,6 @@ Zrobione: test i synchronizacja z Samsung Health (24), porządki na mapie (45–
   - Ustalenia wykonawcy (do ewentualnej korekty): łączny licznik liczy różne miejsca (81), nie pozycje w zestawach (84). Zestawy są rozwinięte jeden pod drugim, bez zwijania; pozycje w kolejności od najwyższej. Data na odznace to pierwsza wizyta; dla miejsca dodanego ręcznie jest to dzień dodania. Zwykła lista przewijana (84 odznaki naraz), bez listy leniwej.
   - Nie testowane na telefonie: wszystko z sekcji „Test na telefonie"; w szczególności czy miejsca zapisane przez wcześniejsze importy łączą się z pozycjami katalogu (zwłaszcza schroniska i szczyty o dwóch nazwach), czytelność długich nazw schronisk w dwóch wierszach pod odznaką, płynność przewijania, wygląd szarych odznak.
 - 2026-11-15 – kolekcja przetestowana na telefonie przez Miłosza: działa; do listy pozycji bez uwag. Zadanie zamknięte; następne w pakiecie interaktywnym: podsumowanie po synchronizacji i odznaki (58 + 19b) – do rozpisania.
+- 2026-11-15 – podsumowanie po synchronizacji, część A – plansze (kod). Zakres i rekomendacje zaakceptowane przez Miłosza (wejście przez akcję „Zobacz" i przycisk w szczegółach, bez samoczynnego otwierania; kilka wędrówek → najnowsza; przyrost szlaków z zapamiętanego procentu). (1) Logika bez Androida: `summary/ActivitySummary.kt` – `ActivitySummaryCalculator.newPlaces` (szczyty i schroniska z wizytą tej wędrówki i bez żadnej wcześniejszej wizyty, także ręcznej), `advanceBaseline` i `trailGrowth` (dwa ostatnie stany postępu: bieżący i ostatni sprzed przybycia nowszych aktywności; przyrost dla wędrówki, której numer leży między nimi). Testy `summary/ActivitySummaryTest` (16). (2) Zapis: `data/TrailProgressBaselineStore.kt` – DataStore `trail_progress_baseline`, cztery klucze; stan niepełny albo ułamek spoza 0–1 = brak. Testy `data/TrailProgressBaselineStoreTest` (7). `TrailProgressRepository` zapisuje stan po każdym udanym liczeniu, przed ogłoszeniem wyniku; błąd zapisu trafia tylko do logu. (3) Synchronizacja: `SyncSummary.newestActivityId` – najpóźniej rozpoczęta z zaimportowanych; `importSession` zwraca numer i start zapisanej aktywności zamiast `Boolean`. `SamsungHealthSyncViewModel.importedEvents` niesie `ImportedActivitiesEvent(count, newestActivityId)` i jest wysyłane także po synchronizacji ręcznej. `MainActivity`: komunikat „Zaimportowano N aktywności" z akcją „Zobacz" (dłuższy czas wyświetlania) → podsumowanie. (4) Ekran: trasa `activity_summary/{activityId}` (bez dolnego paska), `viewmodel/ActivitySummaryViewModel.kt`, `ui/ActivitySummaryScreen.kt` – ciemne tło, `HorizontalPager` z czterema planszami, kropki, przycisk „Dalej" / „Zamknij", „X" u góry. Podejścia i zejścia z tego samego profilu co w szczegółach (`buildActivityElevationProfile` i jego dwa typy zmienione z `private` na `internal`, bez zmiany działania); najwyższy punkt z `maxAltitudeMeters` aktywności, a gdy go brak – z profilu. Plansza „Szlaki": procent (`formatPercent`), pasek, „74,2 km z 612 km", przyrost „+2,1 km nowych szlaków (+0,35 pkt proc.)" albo „Bez nowych odcinków…". (5) Szczegóły aktywności: przycisk „Podsumowanie wędrówki" w „Akcjach", pod „Eksportuj GPX". (6) Odczyt katalogu kolekcji wydzielony do `collection/CollectionCatalogAsset.kt` (używa go też `CollectionViewModel`). `assembleDebug` i wszystkie testy jednostkowe (141) przechodzą.
+  - Ustalenia wykonawcy (do ewentualnej korekty): przyrost na szlakach to różnica między dwoma ostatnimi przeliczeniami, między którymi przybyły aktywności – przy kilku wędrówkach w jednej synchronizacji (albo gdy między synchronizacjami postęp nie był liczony) obejmuje je wszystkie razem i tak samo pokazuje się w podsumowaniu każdej z nich. Postęp liczy się dopiero, gdy coś go potrzebuje (Statystyki, „Ukończone szlaki", karta szlaku, podsumowanie) – punkt odniesienia powstaje przy pierwszym takim liczeniu po tej aktualizacji, więc pierwsza zsynchronizowana wędrówka może jeszcze nie mieć przyrostu. „Najnowsza" wędrówka = najpóźniej rozpoczęta, nie ostatnio zapisana. „Nowe miejsce" porównuje daty wizyt, więc starsza wędrówka zachowuje swoje „pierwsze wejścia" po imporcie późniejszych; miejsca kategorii „Inne" są pomijane; najwyżej 6 nazw na planszy, reszta jako „i jeszcze N". Komunikat po synchronizacji ręcznej pojawia się nad ekranem importu, obok dotychczasowego podsumowania na tym ekranie. Kolory plansz (ciemne tło, zielone akcenty) dobrane bez podglądu na telefonie.
+  - Nie testowane na telefonie: wszystko z sekcji „Test na telefonie (część A)"; w szczególności czy przyrost pojawia się po prawdziwej synchronizacji, czas „Liczę postęp…", wygląd plansz na wąskim ekranie i w poziomie (plansze przewijają się w pionie), czy akcja „Zobacz" jest wygodna przy dłuższym komunikacie.

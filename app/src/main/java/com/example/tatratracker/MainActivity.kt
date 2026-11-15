@@ -5,8 +5,10 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -24,6 +26,7 @@ import com.example.tatratracker.navigation.Screen
 import com.example.tatratracker.ui.AboutScreen
 import com.example.tatratracker.ui.ActivityDetailsScreen
 import com.example.tatratracker.ui.ActivityReplayScreen
+import com.example.tatratracker.ui.ActivitySummaryScreen
 import com.example.tatratracker.ui.BackupScreen
 import com.example.tatratracker.ui.CollectionScreen
 import com.example.tatratracker.ui.CompletedTrailsScreen
@@ -95,6 +98,7 @@ private fun TatraTrackerApp() {
             Screen.Import.route,
             Screen.ActivityDetails.route,
             Screen.ActivityReplay.route,
+            Screen.ActivitySummary.route,
             Screen.PlannedRouteDetails.route,
             Screen.EditPlannedRoute.route
         )
@@ -106,9 +110,27 @@ private fun TatraTrackerApp() {
     val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(samsungHealthSyncViewModel) {
-        samsungHealthSyncViewModel.importedEvents.collect { count ->
-            val noun = if (count == 1) "aktywność" else "aktywności"
-            snackbarHostState.showSnackbar("Zaimportowano $count $noun")
+        samsungHealthSyncViewModel.importedEvents.collect { event ->
+            val noun = if (event.count == 1) "aktywność" else "aktywności"
+            val message = "Zaimportowano ${event.count} $noun"
+            val newestActivityId = event.newestActivityId
+
+            if (newestActivityId == null) {
+                snackbarHostState.showSnackbar(message)
+            } else {
+                // „Zobacz” otwiera podsumowanie najnowszej z zaimportowanych wędrówek.
+                val result = snackbarHostState.showSnackbar(
+                    message = message,
+                    actionLabel = "Zobacz",
+                    duration = SnackbarDuration.Long
+                )
+
+                if (result == SnackbarResult.ActionPerformed) {
+                    navController.navigate(Screen.ActivitySummary.createRoute(newestActivityId)) {
+                        launchSingleTop = true
+                    }
+                }
+            }
         }
     }
 
@@ -516,7 +538,24 @@ private fun TatraTrackerApp() {
                         if (activityId != null) {
                             navController.navigate(Screen.ActivityReplay.createRoute(activityId))
                         }
+                    },
+                    onSummary = {
+                        val activityId = backStackEntry.arguments?.getInt("activityId")
+                        if (activityId != null) {
+                            navController.navigate(Screen.ActivitySummary.createRoute(activityId))
+                        }
                     }
+                )
+            }
+
+            composable(
+                route = Screen.ActivitySummary.route,
+                arguments = listOf(
+                    navArgument("activityId") { type = NavType.IntType }
+                )
+            ) {
+                ActivitySummaryScreen(
+                    onClose = { navController.popBackStack() }
                 )
             }
 

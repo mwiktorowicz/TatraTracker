@@ -19,6 +19,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.DeleteOutline
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.FileDownload
@@ -75,6 +76,7 @@ fun ActivityDetailsScreen(
     onBack: () -> Unit,
     onDeleted: () -> Unit,
     onReplay: () -> Unit,
+    onSummary: () -> Unit,
     viewModel: ActivityDetailsViewModel = viewModel()
 ) {
     val activity by viewModel.activity.collectAsState()
@@ -243,7 +245,8 @@ fun ActivityDetailsScreen(
                     onDelete = {
                         showDeleteDialog = true
                     },
-                    onReplay = onReplay
+                    onReplay = onReplay,
+                    onSummary = onSummary
                 )
             }
         }
@@ -258,7 +261,8 @@ private fun ActivityDetailsContent(
     onEdit: () -> Unit,
     onExport: () -> Unit,
     onDelete: () -> Unit,
-    onReplay: () -> Unit
+    onReplay: () -> Unit,
+    onSummary: () -> Unit
 ) {
     val scrollState = rememberScrollState()
     val sourceLabel = activityFormat(activity.sourceFileName)
@@ -552,6 +556,22 @@ private fun ActivityDetailsContent(
             Spacer(modifier = Modifier.width(8.dp))
 
             Text("Eksportuj GPX")
+        }
+
+        Spacer(modifier = Modifier.height(TatraSpacing.sm))
+
+        // Plansze podsumowania – te same, które można otworzyć po synchronizacji.
+        TatraSecondaryButton(
+            onClick = onSummary
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.AutoAwesome,
+                contentDescription = null
+            )
+
+            Spacer(modifier = Modifier.width(8.dp))
+
+            Text("Podsumowanie wędrówki")
         }
 
         Spacer(modifier = Modifier.height(TatraSpacing.sm))

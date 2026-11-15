@@ -4,7 +4,7 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.tatratracker.collection.CollectionCatalog
-import com.example.tatratracker.collection.CollectionCatalogParser
+import com.example.tatratracker.collection.CollectionCatalogAsset
 import com.example.tatratracker.collection.CollectionProgress
 import com.example.tatratracker.collection.CollectionProgressCalculator
 import com.example.tatratracker.data.AppDatabase
@@ -38,13 +38,7 @@ class CollectionViewModel(
 
     private val catalog: Flow<CollectionCatalog> =
         flow {
-            val json =
-                application.assets
-                    .open(CATALOG_ASSET)
-                    .bufferedReader(Charsets.UTF_8)
-                    .use { reader -> reader.readText() }
-
-            emit(CollectionCatalogParser.parse(json))
+            emit(CollectionCatalogAsset.load(application))
         }.flowOn(Dispatchers.IO)
 
     val uiState: StateFlow<CollectionUiState> =
@@ -68,8 +62,4 @@ class CollectionViewModel(
                 )
             }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), CollectionUiState())
-
-    private companion object {
-        const val CATALOG_ASSET = "kolekcja.json"
-    }
 }

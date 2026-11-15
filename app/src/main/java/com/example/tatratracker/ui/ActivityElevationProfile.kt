@@ -33,12 +33,12 @@ import kotlin.math.roundToInt
 import kotlin.math.sin
 import kotlin.math.sqrt
 
-private data class ActivityElevationSample(
+internal data class ActivityElevationSample(
     val distanceMeters: Double,
     val elevationMeters: Double
 )
 
-private data class ActivityElevationProfileData(
+internal data class ActivityElevationProfileData(
     val samples: List<ActivityElevationSample>,
     val totalDistanceMeters: Double,
     val ascentMeters: Int,
@@ -233,7 +233,8 @@ private fun ElevationChart(
     }
 }
 
-private fun buildActivityElevationProfile(
+// Wspólne z podsumowaniem wędrówki, żeby podejścia i zejścia były wszędzie te same.
+internal fun buildActivityElevationProfile(
     trackPoints: List<TrackPoint>
 ): ActivityElevationProfileData? {
     if (trackPoints.size < 2) {

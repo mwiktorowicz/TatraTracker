@@ -19,6 +19,8 @@ data class SyncSummary(
     /** Treningi już zaimportowane wcześniej albo duplikaty aktywności z pliku. */
     val skipped: Int = 0,
     val failed: Int = 0,
+    /** Najpóźniej rozpoczęta z zaimportowanych aktywności – do podsumowania wędrówki. */
+    val newestActivityId: Int? = null,
 )
 
 sealed interface ManualSyncResult {
@@ -96,6 +98,7 @@ class SamsungHealthSyncService private constructor(context: Context) {
         onProgress: (SyncSummary) -> Unit,
     ): SyncSummary = withContext(Dispatchers.IO) {
         var summary = SyncSummary()
+        var newestStart = Long.MIN_VALUE
         onProgress(summary)
 
         client.readExercises(since) { page ->
@@ -106,10 +109,20 @@ class SamsungHealthSyncService private constructor(context: Context) {
                     }
 
                     summary = try {
-                        if (importSession(record, index, session)) {
-                            summary.copy(imported = summary.imported + 1)
-                        } else {
-                            summary.copy(skipped = summary.skipped + 1)
+                        val imported = importSession(record, index, session)
+
+                        when {
+                            imported == null -> summary.copy(skipped = summary.skipped + 1)
+
+                            imported.startMillis > newestStart -> {
+                                newestStart = imported.startMillis
+                                summary.copy(
+                                    imported = summary.imported + 1,
+                                    newestActivityId = imported.activityId,
+                                )
+                            }
+
+                            else -> summary.copy(imported = summary.imported + 1)
                         }
                     } catch (e: CancellationException) {
                         throw e
@@ -125,10 +138,16 @@ class SamsungHealthSyncService private constructor(context: Context) {
         summary
     }
 
-    /** Zwraca true, gdy trening zapisano; false, gdy pominięto jako już istniejący. */
-    private suspend fun importSession(record: HealthExerciseRecord, index: Int, session: HealthSession): Boolean {
+    private data class ImportedSession(val activityId: Int, val startMillis: Long)
+
+    /** Zwraca zapisany trening albo null, gdy pominięto go jako już istniejący. */
+    private suspend fun importSession(
+        record: HealthExerciseRecord,
+        index: Int,
+        session: HealthSession,
+    ): ImportedSession? {
         if (activityDao.activityExists(SamsungHealthSessionMapper.sourceId(record.uid, index))) {
-            return false
+            return null
         }
 
         val mapped = SamsungHealthSessionMapper.toActivity(record, index, session, ZoneId.systemDefault())
@@ -138,14 +157,14 @@ class SamsungHealthSyncService private constructor(context: Context) {
             start + DuplicateActivityRule.MAX_START_DIFFERENCE_MILLIS,
         )
         if (DuplicateActivityRule.isDuplicateOfFileActivity(start, mapped.activity.distanceMeters, nearby)) {
-            return false
+            return null
         }
 
         val saved = activitySaver.save(mapped.activity, mapped.trackPoints)
         saved.poiDetection.onFailure { error ->
             Log.w(LOG_TAG, "Aktywność ${saved.activityId} zapisana, ale wykrywanie POI nie powiodło się", error)
         }
-        return true
+        return ImportedSession(activityId = saved.activityId, startMillis = start)
     }
 
     companion object {

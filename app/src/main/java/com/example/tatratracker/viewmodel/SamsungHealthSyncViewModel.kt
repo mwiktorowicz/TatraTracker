@@ -19,6 +19,13 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 import kotlin.coroutines.cancellation.CancellationException
 
+/** Zakończona synchronizacja, która coś zaimportowała – do komunikatu z przejściem do podsumowania. */
+data class ImportedActivitiesEvent(
+    val count: Int,
+    /** Najpóźniej rozpoczęta z zaimportowanych aktywności. */
+    val newestActivityId: Int?,
+)
+
 sealed interface SamsungHealthSyncState {
 
     data object Idle : SamsungHealthSyncState
@@ -49,10 +56,10 @@ class SamsungHealthSyncViewModel(application: Application) : AndroidViewModel(ap
     private val _state = MutableStateFlow<SamsungHealthSyncState>(SamsungHealthSyncState.Idle)
     val state: StateFlow<SamsungHealthSyncState> = _state.asStateFlow()
 
-    private val _importedEvents = Channel<Int>(Channel.BUFFERED)
+    private val _importedEvents = Channel<ImportedActivitiesEvent>(Channel.BUFFERED)
 
-    /** Liczba aktywności zaimportowanych automatycznie (tylko gdy > 0) – do krótkiego komunikatu. */
-    val importedEvents: Flow<Int> = _importedEvents.receiveAsFlow()
+    /** Synchronizacje (automatyczne i ręczne), które zaimportowały choć jedną aktywność. */
+    val importedEvents: Flow<ImportedActivitiesEvent> = _importedEvents.receiveAsFlow()
 
     init {
         startAutoSync()
@@ -79,7 +86,10 @@ class SamsungHealthSyncViewModel(application: Application) : AndroidViewModel(ap
                     )
                 }
                 when (result) {
-                    is ManualSyncResult.Completed -> SamsungHealthSyncState.Finished(result.summary)
+                    is ManualSyncResult.Completed -> {
+                        notifyImported(result.summary)
+                        SamsungHealthSyncState.Finished(result.summary)
+                    }
                     ManualSyncResult.PermissionsMissing -> SamsungHealthSyncState.PermissionsMissing
                 }
             } catch (e: CancellationException) {
@@ -110,9 +120,15 @@ class SamsungHealthSyncViewModel(application: Application) : AndroidViewModel(ap
                     }
             }
 
-            if (summary != null && summary.imported > 0) {
-                _importedEvents.send(summary.imported)
+            if (summary != null) {
+                notifyImported(summary)
             }
+        }
+    }
+
+    private suspend fun notifyImported(summary: SyncSummary) {
+        if (summary.imported > 0) {
+            _importedEvents.send(ImportedActivitiesEvent(summary.imported, summary.newestActivityId))
         }
     }
 

@@ -1,0 +1,106 @@
+package com.example.tatratracker.summary
+
+import com.example.tatratracker.data.PoiVisitEntity
+import com.example.tatratracker.data.SavedPlaceCategory
+import com.example.tatratracker.data.SavedPlaceEntity
+
+/*
+ * =========================================================
+ * PODSUMOWANIE WĘDRÓWKI
+ * =========================================================
+ *
+ * Czysta logika plansz podsumowania: które miejsca wędrówka odwiedziła jako pierwsza
+ * i o ile po niej urósł postęp na sieci szlaków.
+ */
+
+/** Postęp na sieci szlaków policzony, gdy najnowsza aktywność miała numer [maxActivityId]. */
+data class TrailProgressRecord(
+    val fraction: Double,
+    val maxActivityId: Int
+)
+
+/**
+ * Dwa ostatnie stany postępu: [current] – ostatnio policzony, [previous] – ostatni
+ * sprzed przybycia nowszych aktywności. Ich różnica to przyrost po nowych wędrówkach.
+ */
+data class TrailProgressBaseline(
+    val current: TrailProgressRecord? = null,
+    val previous: TrailProgressRecord? = null
+)
+
+object ActivitySummaryCalculator {
+
+    /**
+     * Szczyty i schroniska, w których wędrówka [activityId] była jako pierwsza:
+     * mają wizytę z tej wędrówki i żadnej wcześniejszej (także dodanej ręcznie).
+     * Kolejność jak przy wykrywaniu wizyt.
+     */
+    fun newPlaces(
+        activityId: Int,
+        places: List<SavedPlaceEntity>,
+        visits: List<PoiVisitEntity>
+    ): List<SavedPlaceEntity> {
+        val placesById = places.associateBy { place -> place.id }
+        val visitsByPlace = visits.groupBy { visit -> visit.placeId }
+
+        return visits
+            .filter { visit -> visit.activityId == activityId }
+            .sortedBy { visit -> visit.id }
+            .filter { visit ->
+                visitsByPlace[visit.placeId].orEmpty().none { other ->
+                    other.visitedAt < visit.visitedAt
+                }
+            }
+            .mapNotNull { visit -> placesById[visit.placeId] }
+            .filter { place ->
+                place.category == SavedPlaceCategory.MOUNTAIN ||
+                    place.category == SavedPlaceCategory.HUT
+            }
+            .distinctBy { place -> place.id }
+    }
+
+    /**
+     * Zapamiętuje świeżo policzony postęp. Poprzedni stan przesuwa się do [TrailProgressBaseline.previous]
+     * tylko wtedy, gdy przybyła nowsza aktywność – ponowne liczenie tej samej listy go nie rusza.
+     */
+    fun advanceBaseline(
+        baseline: TrailProgressBaseline,
+        fraction: Double,
+        maxActivityId: Int
+    ): TrailProgressBaseline {
+        val record = TrailProgressRecord(fraction = fraction, maxActivityId = maxActivityId)
+        val current = baseline.current
+
+        return when {
+            current == null ->
+                TrailProgressBaseline(current = record, previous = baseline.previous?.before(record))
+
+            maxActivityId > current.maxActivityId ->
+                TrailProgressBaseline(current = record, previous = current)
+
+            // Ta sama lista albo usunięta najnowsza aktywność: punkt odniesienia zostaje,
+            // o ile nadal jest starszy od bieżącego stanu.
+            else ->
+                TrailProgressBaseline(current = record, previous = baseline.previous?.before(record))
+        }
+    }
+
+    /**
+     * Przyrost postępu (ułamek sieci szlaków), który przyniosła m.in. wędrówka [activityId];
+     * null, gdy nie ma punktu odniesienia sprzed tej wędrówki albo postęp jeszcze jej nie obejmuje.
+     */
+    fun trailGrowth(baseline: TrailProgressBaseline, activityId: Int): Double? {
+        val current = baseline.current ?: return null
+        val previous = baseline.previous ?: return null
+
+        if (current.maxActivityId < activityId || previous.maxActivityId >= activityId) {
+            return null
+        }
+
+        return (current.fraction - previous.fraction).coerceAtLeast(0.0)
+    }
+
+    private fun TrailProgressRecord.before(record: TrailProgressRecord): TrailProgressRecord? {
+        return takeIf { maxActivityId < record.maxActivityId }
+    }
+}

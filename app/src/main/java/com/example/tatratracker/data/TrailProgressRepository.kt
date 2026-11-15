@@ -1,6 +1,8 @@
 package com.example.tatratracker.data
 
 import android.content.Context
+import android.util.Log
+import java.io.IOException
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -55,6 +57,8 @@ class TrailProgressRepository private constructor(
     private val activityDao = AppDatabase.getDatabase(context).activityDao()
 
     private val trailMatcher = TrailMatcher(context)
+
+    private val baselineStore = TrailProgressBaselineStore(context)
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
@@ -117,6 +121,9 @@ class TrailProgressRepository private constructor(
                     }
                 )
 
+            // Przed ogłoszeniem wyniku, żeby podsumowanie wędrówki od razu widziało przyrost.
+            rememberProgress(result.completedFraction, activityIds.maxOrNull() ?: 0)
+
             _state.value =
                 TrailProgressState(
                     isLoading = false,
@@ -134,7 +141,18 @@ class TrailProgressRepository private constructor(
         }
     }
 
+    // Błąd zapisu nie może zepsuć samego postępu – najwyżej zabraknie przyrostu w podsumowaniu.
+    private suspend fun rememberProgress(fraction: Double, maxActivityId: Int) {
+        try {
+            baselineStore.record(fraction, maxActivityId)
+        } catch (error: IOException) {
+            Log.w(LOG_TAG, "Nie udało się zapamiętać postępu na szlakach", error)
+        }
+    }
+
     companion object {
+
+        private const val LOG_TAG = "TrailProgress"
 
         @Volatile
         private var INSTANCE: TrailProgressRepository? = null

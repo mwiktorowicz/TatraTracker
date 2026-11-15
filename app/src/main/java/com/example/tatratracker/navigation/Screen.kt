@@ -82,6 +82,14 @@ sealed class Screen(
         }
     }
 
+    // Pełnoekranowe plansze podsumowania wędrówki (bez dolnego paska).
+    object ActivitySummary : Screen("activity_summary/{activityId}") {
+
+        fun createRoute(activityId: Int): String {
+            return "activity_summary/$activityId"
+        }
+    }
+
     object PlannedRouteDetails : Screen(
         "planned_route_details/{routeId}"
     ) {
