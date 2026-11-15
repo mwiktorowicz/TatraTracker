@@ -92,6 +92,29 @@ class ActivitySummaryTest {
         assertEquals(emptyList<String>(), newPlaceNames(7, visits))
     }
 
+    // ---------- nazwy na karcie do udostępnienia ----------
+
+    @Test
+    fun placeNamesLine_fewNames_listsAll() {
+        assertEquals(
+            "Giewont, Kopa Kondracka",
+            ActivitySummaryCalculator.placeNamesLine(listOf("Giewont", "Kopa Kondracka"), 3)
+        )
+    }
+
+    @Test
+    fun placeNamesLine_tooManyNames_countsTheRest() {
+        assertEquals(
+            "Giewont, Kopa Kondracka +2",
+            ActivitySummaryCalculator.placeNamesLine(listOf("Giewont", "Kopa Kondracka", "Rysy", "Krywań"), 2)
+        )
+    }
+
+    @Test
+    fun placeNamesLine_noNames_isEmpty() {
+        assertEquals("", ActivitySummaryCalculator.placeNamesLine(emptyList(), 3))
+    }
+
     // ---------- punkt odniesienia postępu ----------
 
     private fun record(fraction: Double, maxActivityId: Int) = TrailProgressRecord(fraction, maxActivityId)

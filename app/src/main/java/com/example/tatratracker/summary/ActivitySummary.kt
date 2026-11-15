@@ -100,6 +100,21 @@ object ActivitySummaryCalculator {
         return (current.fraction - previous.fraction).coerceAtLeast(0.0)
     }
 
+    /**
+     * Nazwy miejsc w jednym wierszu karty do udostępnienia: najwyżej [maxNames] nazw,
+     * reszta jako liczba – „Giewont, Kopa Kondracka +2”.
+     */
+    fun placeNamesLine(names: List<String>, maxNames: Int): String {
+        val shown = names.take(maxNames.coerceAtLeast(0))
+        val hidden = names.size - shown.size
+
+        return when {
+            hidden <= 0 -> shown.joinToString(", ")
+            shown.isEmpty() -> "+$hidden"
+            else -> "${shown.joinToString(", ")} +$hidden"
+        }
+    }
+
     private fun TrailProgressRecord.before(record: TrailProgressRecord): TrailProgressRecord? {
         return takeIf { maxActivityId < record.maxActivityId }
     }

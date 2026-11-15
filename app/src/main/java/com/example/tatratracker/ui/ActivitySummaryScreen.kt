@@ -1,6 +1,7 @@
 package com.example.tatratracker.ui
 
 import androidx.compose.foundation.background
+import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -11,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
@@ -23,6 +25,7 @@ import androidx.compose.material.icons.outlined.Hiking
 import androidx.compose.material.icons.outlined.Landscape
 import androidx.compose.material.icons.outlined.Place
 import androidx.compose.material.icons.outlined.Route
+import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -32,12 +35,21 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.asAndroidBitmap
+import androidx.compose.ui.graphics.layer.GraphicsLayer
+import androidx.compose.ui.graphics.layer.drawLayer
+import androidx.compose.ui.graphics.rememberGraphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -47,8 +59,10 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.tatratracker.data.ActivityEntity
 import com.example.tatratracker.data.SavedPlaceCategory
 import com.example.tatratracker.data.SavedPlaceEntity
+import com.example.tatratracker.share.SummaryImageSharer
 import com.example.tatratracker.ui.components.TatraPrimaryButton
 import com.example.tatratracker.ui.components.TatraProgressBar
+import com.example.tatratracker.ui.components.TatraSecondaryButton
 import com.example.tatratracker.ui.format.TatraFormat
 import com.example.tatratracker.ui.theme.TatraDark
 import com.example.tatratracker.ui.theme.TatraDarkMuted
@@ -58,13 +72,15 @@ import com.example.tatratracker.ui.theme.TatraWhite
 import com.example.tatratracker.viewmodel.ActivitySummaryElevation
 import com.example.tatratracker.viewmodel.ActivitySummaryPlaces
 import com.example.tatratracker.viewmodel.ActivitySummaryTrails
+import com.example.tatratracker.viewmodel.ActivitySummaryUiState
 import com.example.tatratracker.viewmodel.ActivitySummaryViewModel
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.launch
 
-private const val SUMMARY_PAGE_COUNT = 4
+private const val SUMMARY_PAGE_COUNT = 5
 
 // Najwyżej tyle nowych miejsc mieści się na planszy z nazwy.
 private const val MAX_LISTED_PLACES = 6
@@ -77,7 +93,7 @@ private val SummaryDivider = TatraWhite.copy(alpha = 0.14f)
 
 /**
  * Pełnoekranowe plansze podsumowania jednej wędrówki, przesuwane w bok:
- * wędrówka, wysokość, nowe miejsca, szlaki.
+ * wędrówka, wysokość, nowe miejsca, szlaki i karta do udostępnienia.
  */
 @Composable
 fun ActivitySummaryScreen(
@@ -88,6 +104,12 @@ fun ActivitySummaryScreen(
 
     val pagerState = rememberPagerState(pageCount = { SUMMARY_PAGE_COUNT })
     val scope = rememberCoroutineScope()
+
+    val context = LocalContext.current
+
+    // Warstwa, do której rysuje się karta z ostatniej planszy – z niej powstaje obrazek.
+    val shareCardLayer = rememberGraphicsLayer()
+    var isSharing by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -145,7 +167,40 @@ fun ActivitySummaryScreen(
                         0 -> HikePage(activity)
                         1 -> ElevationPage(state.elevation)
                         2 -> PlacesPage(state.places)
-                        else -> TrailsPage(state.trails)
+                        3 -> TrailsPage(state.trails)
+                        else ->
+                            SharePage(
+                                activity = activity,
+                                state = state,
+                                cardLayer = shareCardLayer,
+                                isSharing = isSharing,
+                                onShare = {
+                                    if (!isSharing) {
+                                        isSharing = true
+
+                                        scope.launch {
+                                            try {
+                                                val bitmap = shareCardLayer.toImageBitmap().asAndroidBitmap()
+                                                val imageUri = SummaryImageSharer.save(context, bitmap)
+
+                                                context.startActivity(
+                                                    SummaryImageSharer.chooserIntent(imageUri, activity.name)
+                                                )
+                                            } catch (error: CancellationException) {
+                                                throw error
+                                            } catch (error: Exception) {
+                                                Toast.makeText(
+                                                    context,
+                                                    "Nie udało się przygotować obrazka.",
+                                                    Toast.LENGTH_LONG
+                                                ).show()
+                                            } finally {
+                                                isSharing = false
+                                            }
+                                        }
+                                    }
+                                }
+                            )
                     }
                 }
 
@@ -354,6 +409,45 @@ private fun TrailsPage(trails: ActivitySummaryTrails) {
                     SummaryNote("Ostatnie przeliczenie się nie udało – wynik może być nieaktualny.")
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun SharePage(
+    activity: ActivityEntity,
+    state: ActivitySummaryUiState,
+    cardLayer: GraphicsLayer,
+    isSharing: Boolean,
+    onShare: () -> Unit
+) {
+    SummaryPage(icon = Icons.Outlined.Share, label = "Na pamiątkę") {
+        // Karta rysuje się do warstwy i z niej na ekran – obrazek jest dokładnie tym, co widać.
+        ActivitySummaryShareCard(
+            activity = activity,
+            state = state,
+            modifier = Modifier.drawWithContent {
+                cardLayer.record {
+                    this@drawWithContent.drawContent()
+                }
+
+                drawLayer(cardLayer)
+            }
+        )
+
+        TatraSecondaryButton(
+            onClick = onShare,
+            enabled = !isSharing,
+            modifier = Modifier.padding(top = TatraSpacing.md)
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.Share,
+                contentDescription = null
+            )
+
+            Spacer(modifier = Modifier.width(8.dp))
+
+            Text("Udostępnij")
         }
     }
 }
