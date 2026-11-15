@@ -1,0 +1,705 @@
+{
+ "source": "OpenStreetMap (ODbL), stan na 2026-11-15",
+ "sets": [
+  {
+   "id": "huts_pl",
+   "title": "Schroniska Tatr Polskich",
+   "description": "Schroniska PTTK po polskiej stronie Tatr.",
+   "items": [
+    {
+     "id": "way/250746663",
+     "name": "Schronisko PTTK w Dolinie Pięciu Stawów Polskich",
+     "category": "HUT",
+     "elevation": 1670,
+     "lat": 49.213641,
+     "lon": 20.04874
+    },
+    {
+     "id": "way/358407058",
+     "name": "Murowaniec",
+     "category": "HUT",
+     "elevation": 1500,
+     "lat": 49.243418,
+     "lon": 20.00716
+    },
+    {
+     "id": "way/300719423",
+     "name": "Schronisko PTTK Morskie Oko",
+     "category": "HUT",
+     "elevation": 1410,
+     "lat": 49.201428,
+     "lon": 20.07126
+    },
+    {
+     "id": "way/184188834",
+     "name": "Schronisko PTTK Hala Kondratowa",
+     "category": "HUT",
+     "elevation": 1333,
+     "lat": 49.249882,
+     "lon": 19.951682
+    },
+    {
+     "id": "way/303740443",
+     "name": "Schronisko PTTK na Polanie Chochołowskiej",
+     "category": "HUT",
+     "elevation": 1146,
+     "lat": 49.236347,
+     "lon": 19.787759
+    },
+    {
+     "id": "way/241024507",
+     "name": "Schronisko PTTK na Hali Ornak",
+     "category": "HUT",
+     "elevation": 1100,
+     "lat": 49.229176,
+     "lon": 19.858709
+    },
+    {
+     "id": "way/253824570",
+     "name": "Schronisko PTTK w Dolinie Roztoki",
+     "category": "HUT",
+     "elevation": 1031,
+     "lat": 49.23372,
+     "lon": 20.095677
+    }
+   ]
+  },
+  {
+   "id": "huts_sk",
+   "title": "Schroniska Tatr Słowackich",
+   "description": "Schroniska górskie po słowackiej stronie Tatr.",
+   "items": [
+    {
+     "id": "way/360934553",
+     "name": "Schronisko pod Wagą",
+     "category": "HUT",
+     "elevation": 2250,
+     "lat": 49.174604,
+     "lon": 20.087028
+    },
+    {
+     "id": "way/33859958",
+     "name": "Schronisko Téryego",
+     "category": "HUT",
+     "elevation": 2015,
+     "lat": 49.190047,
+     "lon": 20.198947
+    },
+    {
+     "id": "way/64888292",
+     "name": "Schronisko Zbójnickie",
+     "category": "HUT",
+     "elevation": 1960,
+     "lat": 49.176609,
+     "lon": 20.167395
+    },
+    {
+     "id": "way/27918182",
+     "name": "Chata pod Soliskom",
+     "category": "HUT",
+     "elevation": 1840,
+     "lat": 49.144342,
+     "lon": 20.040543
+    },
+    {
+     "id": "way/50492926",
+     "name": "Łomnickie Schronisko",
+     "category": "HUT",
+     "elevation": 1725,
+     "lat": 49.186236,
+     "lon": 20.233551
+    },
+    {
+     "id": "way/33859960",
+     "name": "Schronisko nad Zielonym Stawem",
+     "category": "HUT",
+     "elevation": 1548,
+     "lat": 49.210135,
+     "lon": 20.221076
+    },
+    {
+     "id": "way/33863872",
+     "name": "Schronisko nad Popradzkim Stawem",
+     "category": "HUT",
+     "elevation": 1494,
+     "lat": 49.155013,
+     "lon": 20.079908
+    },
+    {
+     "id": "way/33869432",
+     "name": "Zamkovského chata",
+     "category": "HUT",
+     "elevation": 1475,
+     "lat": 49.173992,
+     "lon": 20.219717
+    },
+    {
+     "id": "way/79961857",
+     "name": "Chata Pod Náružím - Červenec",
+     "category": "HUT",
+     "elevation": 1420,
+     "lat": 49.183472,
+     "lon": 19.640352
+    },
+    {
+     "id": "way/59241947",
+     "name": "Ťatliakova chata",
+     "category": "HUT",
+     "elevation": 1393,
+     "lat": 49.213708,
+     "lon": 19.747434
+    },
+    {
+     "id": "way/566288432",
+     "name": "Žiarska chata",
+     "category": "HUT",
+     "elevation": 1325,
+     "lat": 49.181096,
+     "lon": 19.719512
+    },
+    {
+     "id": "way/27865088",
+     "name": "Rainerova chata",
+     "category": "HUT",
+     "elevation": 1304,
+     "lat": 49.166874,
+     "lon": 20.218644
+    },
+    {
+     "id": "way/562321415",
+     "name": "Schronisko pod Szarotką",
+     "category": "HUT",
+     "elevation": 1290,
+     "lat": 49.224571,
+     "lon": 20.27611
+    },
+    {
+     "id": "way/301993072",
+     "name": "Bilíkova chata",
+     "category": "HUT",
+     "elevation": 1255,
+     "lat": 49.160049,
+     "lon": 20.22436
+    },
+    {
+     "id": "way/181561885",
+     "name": "Chata Zverovka",
+     "category": "HUT",
+     "elevation": 1037,
+     "lat": 49.248475,
+     "lon": 19.710668
+    }
+   ]
+  },
+  {
+   "id": "trail_peaks",
+   "title": "Szczyty ze szlakiem",
+   "description": "Szczyty Tatr, na które prowadzi znakowany szlak.",
+   "items": [
+    {
+     "id": "node/1862536196",
+     "name": "Rysy",
+     "category": "MOUNTAIN",
+     "elevation": 2503,
+     "lat": 49.179319,
+     "lon": 20.088464
+    },
+    {
+     "id": "node/260278694",
+     "name": "Krywań",
+     "category": "MOUNTAIN",
+     "elevation": 2494,
+     "lat": 49.162834,
+     "lon": 20.000045
+    },
+    {
+     "id": "node/380721955",
+     "name": "Sławkowski Szczyt",
+     "category": "MOUNTAIN",
+     "elevation": 2452,
+     "lat": 49.166079,
+     "lon": 20.184592
+    },
+    {
+     "id": "node/382487001",
+     "name": "Mała Wysoka",
+     "category": "MOUNTAIN",
+     "elevation": 2429,
+     "lat": 49.175279,
+     "lon": 20.145459
+    },
+    {
+     "id": "node/380745908",
+     "name": "Koprowy Wierch",
+     "category": "MOUNTAIN",
+     "elevation": 2367,
+     "lat": 49.182374,
+     "lon": 20.048246
+    },
+    {
+     "id": "node/3343362920",
+     "name": "Świnica",
+     "category": "MOUNTAIN",
+     "elevation": 2302,
+     "lat": 49.219421,
+     "lon": 20.009306
+    },
+    {
+     "id": "node/460928401",
+     "name": "Kozi Wierch",
+     "category": "MOUNTAIN",
+     "elevation": 2291,
+     "lat": 49.218317,
+     "lon": 20.028705
+    },
+    {
+     "id": "node/495957137",
+     "name": "Bystra",
+     "category": "MOUNTAIN",
+     "elevation": 2248,
+     "lat": 49.188618,
+     "lon": 19.842587
+    },
+    {
+     "id": "node/1496151183",
+     "name": "Zadni Granat",
+     "category": "MOUNTAIN",
+     "elevation": 2240,
+     "lat": 49.22477,
+     "lon": 20.032569
+    },
+    {
+     "id": "node/1878512558",
+     "name": "Pośredni Granat",
+     "category": "MOUNTAIN",
+     "elevation": 2234,
+     "lat": 49.225701,
+     "lon": 20.032735
+    },
+    {
+     "id": "node/385127091",
+     "name": "Jagnięcy Szczyt",
+     "category": "MOUNTAIN",
+     "elevation": 2229,
+     "lat": 49.219694,
+     "lon": 20.208103
+    },
+    {
+     "id": "node/1496151182",
+     "name": "Skrajny Granat",
+     "category": "MOUNTAIN",
+     "elevation": 2228,
+     "lat": 49.226945,
+     "lon": 20.033293
+    },
+    {
+     "id": "node/460928032",
+     "name": "Mały Kozi Wierch",
+     "category": "MOUNTAIN",
+     "elevation": 2226,
+     "lat": 49.218922,
+     "lon": 20.020038
+    },
+    {
+     "id": "node/495956991",
+     "name": "Jakubina",
+     "category": "MOUNTAIN",
+     "elevation": 2194,
+     "lat": 49.193251,
+     "lon": 19.801276
+    },
+    {
+     "id": "node/495953908",
+     "name": "Baraniec",
+     "category": "MOUNTAIN",
+     "elevation": 2182,
+     "lat": 49.173521,
+     "lon": 19.740827
+    },
+    {
+     "id": "node/2910369166",
+     "name": "Banówka",
+     "category": "MOUNTAIN",
+     "elevation": 2178,
+     "lat": 49.198055,
+     "lon": 19.710347
+    },
+    {
+     "id": "node/1294543835",
+     "name": "Starorobociański Wierch",
+     "category": "MOUNTAIN",
+     "elevation": 2176,
+     "lat": 49.199526,
+     "lon": 19.819835
+    },
+    {
+     "id": "node/452477062",
+     "name": "Szpiglasowy Wierch",
+     "category": "MOUNTAIN",
+     "elevation": 2172,
+     "lat": 49.197291,
+     "lon": 20.040106
+    },
+    {
+     "id": "node/1674619682",
+     "name": "Pachoł",
+     "category": "MOUNTAIN",
+     "elevation": 2167,
+     "lat": 49.201422,
+     "lon": 19.702659
+    },
+    {
+     "id": "node/1674619679",
+     "name": "Hruba Kopa",
+     "category": "MOUNTAIN",
+     "elevation": 2166,
+     "lat": 49.200123,
+     "lon": 19.722981
+    },
+    {
+     "id": "node/355985949",
+     "name": "Kościelec",
+     "category": "MOUNTAIN",
+     "elevation": 2155,
+     "lat": 49.225179,
+     "lon": 20.014583
+    },
+    {
+     "id": "node/3560920780",
+     "name": "Jarząbczy Wierch",
+     "category": "MOUNTAIN",
+     "elevation": 2137,
+     "lat": 49.197473,
+     "lon": 19.795104
+    },
+    {
+     "id": "node/5144401188",
+     "name": "Tri kopy",
+     "category": "MOUNTAIN",
+     "elevation": 2136,
+     "lat": 49.199927,
+     "lon": 19.728947
+    },
+    {
+     "id": "node/1735156627",
+     "name": "Rohacz Płaczliwy",
+     "category": "MOUNTAIN",
+     "elevation": 2125,
+     "lat": 49.197121,
+     "lon": 19.748123
+    },
+    {
+     "id": "node/1295341402",
+     "name": "Krzesanica",
+     "category": "MOUNTAIN",
+     "elevation": 2122,
+     "lat": 49.231665,
+     "lon": 19.909492
+    },
+    {
+     "id": "node/385082796",
+     "name": "Skrajne Solisko",
+     "category": "MOUNTAIN",
+     "elevation": 2117,
+     "lat": 49.149645,
+     "lon": 20.039063
+    },
+    {
+     "id": "node/496805357",
+     "name": "Ciemniak",
+     "category": "MOUNTAIN",
+     "elevation": 2096,
+     "lat": 49.231007,
+     "lon": 19.903405
+    },
+    {
+     "id": "node/496805360",
+     "name": "Małołączniak",
+     "category": "MOUNTAIN",
+     "elevation": 2096,
+     "lat": 49.23583,
+     "lon": 19.919223
+    },
+    {
+     "id": "node/1674619681",
+     "name": "Rohacz Ostry",
+     "category": "MOUNTAIN",
+     "elevation": 2088,
+     "lat": 49.20023,
+     "lon": 19.757448
+    },
+    {
+     "id": "node/495997371",
+     "name": "Smrek",
+     "category": "MOUNTAIN",
+     "elevation": 2074,
+     "lat": 49.182578,
+     "lon": 19.747976
+    },
+    {
+     "id": "node/2302916813",
+     "name": "Wołowiec",
+     "category": "MOUNTAIN",
+     "elevation": 2064,
+     "lat": 49.207569,
+     "lon": 19.763128
+    },
+    {
+     "id": "node/3264150963",
+     "name": "Salatyński Wierch",
+     "category": "MOUNTAIN",
+     "elevation": 2048,
+     "lat": 49.213638,
+     "lon": 19.686165
+    },
+    {
+     "id": "node/430646675",
+     "name": "Beskid",
+     "category": "MOUNTAIN",
+     "elevation": 2012,
+     "lat": 49.228237,
+     "lon": 19.987923
+    },
+    {
+     "id": "node/3560695684",
+     "name": "Kopa Kondracka",
+     "category": "MOUNTAIN",
+     "elevation": 2005,
+     "lat": 49.236541,
+     "lon": 19.932268
+    },
+    {
+     "id": "node/1294543842",
+     "name": "Kończysty Wierch",
+     "category": "MOUNTAIN",
+     "elevation": 2002,
+     "lat": 49.205658,
+     "lon": 19.807585
+    },
+    {
+     "id": "node/3552158247",
+     "name": "Kasprowy Wierch",
+     "category": "MOUNTAIN",
+     "elevation": 1987,
+     "lat": 49.231801,
+     "lon": 19.981561
+    },
+    {
+     "id": "node/4015272013",
+     "name": "Brestowa",
+     "category": "MOUNTAIN",
+     "elevation": 1932,
+     "lat": 49.22266,
+     "lon": 19.682101
+    },
+    {
+     "id": "node/1295278143",
+     "name": "Wielki Giewont",
+     "category": "MOUNTAIN",
+     "elevation": 1895,
+     "lat": 49.250954,
+     "lon": 19.934102
+    },
+    {
+     "id": "node/946080669",
+     "name": "Rakoń",
+     "category": "MOUNTAIN",
+     "elevation": 1879,
+     "lat": 49.215958,
+     "lon": 19.758462
+    },
+    {
+     "id": "node/3560285056",
+     "name": "Mały Kościelec",
+     "category": "MOUNTAIN",
+     "elevation": 1866,
+     "lat": 49.229934,
+     "lon": 20.011406
+    },
+    {
+     "id": "node/1294577934",
+     "name": "Ornak",
+     "category": "MOUNTAIN",
+     "elevation": 1854,
+     "lat": 49.219046,
+     "lon": 19.832949
+    },
+    {
+     "id": "node/4330069865",
+     "name": "Siwy Wierch",
+     "category": "MOUNTAIN",
+     "elevation": 1805,
+     "lat": 49.21113,
+     "lon": 19.642154
+    },
+    {
+     "id": "node/1294543814",
+     "name": "Trzydniowiański Wierch",
+     "category": "MOUNTAIN",
+     "elevation": 1758,
+     "lat": 49.219104,
+     "lon": 19.803726
+    },
+    {
+     "id": "node/803761542",
+     "name": "Grześ",
+     "category": "MOUNTAIN",
+     "elevation": 1653,
+     "lat": 49.236641,
+     "lon": 19.76664
+    },
+    {
+     "id": "node/803761539",
+     "name": "Gęsia Szyja",
+     "category": "MOUNTAIN",
+     "elevation": 1489,
+     "lat": 49.259029,
+     "lon": 20.076519
+    },
+    {
+     "id": "node/469733583",
+     "name": "Sarnia Skała",
+     "category": "MOUNTAIN",
+     "elevation": 1378,
+     "lat": 49.264899,
+     "lon": 19.941001
+    },
+    {
+     "id": "node/2098613390",
+     "name": "Wielki Kopieniec",
+     "category": "MOUNTAIN",
+     "elevation": 1328,
+     "lat": 49.271655,
+     "lon": 20.016304
+    },
+    {
+     "id": "node/1103336843",
+     "name": "Nosal",
+     "category": "MOUNTAIN",
+     "elevation": 1206,
+     "lat": 49.276431,
+     "lon": 19.989459
+    }
+   ]
+  },
+  {
+   "id": "great_crown",
+   "title": "Wielka Korona Tatr",
+   "description": "Czternaście szczytów powyżej 2500 m; na większość nie prowadzi szlak.",
+   "items": [
+    {
+     "id": "node/26862937",
+     "name": "Gerlach",
+     "category": "MOUNTAIN",
+     "elevation": 2655,
+     "lat": 49.164032,
+     "lon": 20.13406
+    },
+    {
+     "id": "node/891526548",
+     "name": "Łomnica",
+     "category": "MOUNTAIN",
+     "elevation": 2633,
+     "lat": 49.195143,
+     "lon": 20.213033
+    },
+    {
+     "id": "node/380717332",
+     "name": "Lodowy Szczyt",
+     "category": "MOUNTAIN",
+     "elevation": 2628,
+     "lat": 49.198545,
+     "lon": 20.182765
+    },
+    {
+     "id": "node/385101740",
+     "name": "Durny Szczyt",
+     "category": "MOUNTAIN",
+     "elevation": 2621,
+     "lat": 49.197592,
+     "lon": 20.207996
+    },
+    {
+     "id": "node/380695970",
+     "name": "Kieżmarski Szczyt",
+     "category": "MOUNTAIN",
+     "elevation": 2556,
+     "lat": 49.199235,
+     "lon": 20.219461
+    },
+    {
+     "id": "node/385080084",
+     "name": "Wysoka",
+     "category": "MOUNTAIN",
+     "elevation": 2547,
+     "lat": 49.173175,
+     "lon": 20.093512
+    },
+    {
+     "id": "node/385118677",
+     "name": "Kończysta",
+     "category": "MOUNTAIN",
+     "elevation": 2536,
+     "lat": 49.157311,
+     "lon": 20.114073
+    },
+    {
+     "id": "node/385126469",
+     "name": "Baranie Rogi",
+     "category": "MOUNTAIN",
+     "elevation": 2526,
+     "lat": 49.20164,
+     "lon": 20.197161
+    },
+    {
+     "id": "node/1862536196",
+     "name": "Rysy",
+     "category": "MOUNTAIN",
+     "elevation": 2503,
+     "lat": 49.179319,
+     "lon": 20.088464
+    },
+    {
+     "id": "node/260278694",
+     "name": "Krywań",
+     "category": "MOUNTAIN",
+     "elevation": 2494,
+     "lat": 49.162834,
+     "lon": 20.000045
+    },
+    {
+     "id": "node/385125633",
+     "name": "Staroleśny Szczyt",
+     "category": "MOUNTAIN",
+     "elevation": 2489,
+     "lat": 49.171338,
+     "lon": 20.155678
+    },
+    {
+     "id": "node/385095983",
+     "name": "Ganek",
+     "category": "MOUNTAIN",
+     "elevation": 2462,
+     "lat": 49.174256,
+     "lon": 20.103992
+    },
+    {
+     "id": "node/380721955",
+     "name": "Sławkowski Szczyt",
+     "category": "MOUNTAIN",
+     "elevation": 2452,
+     "lat": 49.166079,
+     "lon": 20.184592
+    },
+    {
+     "id": "node/385113132",
+     "name": "Pośrednia Grań",
+     "category": "MOUNTAIN",
+     "elevation": 2441,
+     "lat": 49.184979,
+     "lon": 20.194357
+    }
+   ]
+  }
+ ]
+}
