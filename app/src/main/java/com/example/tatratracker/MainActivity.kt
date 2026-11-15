@@ -23,6 +23,7 @@ import androidx.navigation.navArgument
 import com.example.tatratracker.navigation.Screen
 import com.example.tatratracker.ui.AboutScreen
 import com.example.tatratracker.ui.ActivityDetailsScreen
+import com.example.tatratracker.ui.ActivityReplayScreen
 import com.example.tatratracker.ui.BackupScreen
 import com.example.tatratracker.ui.CompletedTrailsScreen
 import com.example.tatratracker.ui.DataExportScreen
@@ -91,6 +92,7 @@ private fun TatraTrackerApp() {
             Screen.About.route,
             Screen.Import.route,
             Screen.ActivityDetails.route,
+            Screen.ActivityReplay.route,
             Screen.PlannedRouteDetails.route,
             Screen.EditPlannedRoute.route
         )
@@ -480,6 +482,7 @@ private fun TatraTrackerApp() {
                         }
                     )
             ) {
+                    backStackEntry ->
 
                 ActivityDetailsScreen(
                     onBack = {
@@ -496,7 +499,24 @@ private fun TatraTrackerApp() {
                                 inclusive =
                                     false
                             )
+                    },
+                    onReplay = {
+                        val activityId = backStackEntry.arguments?.getInt("activityId")
+                        if (activityId != null) {
+                            navController.navigate(Screen.ActivityReplay.createRoute(activityId))
+                        }
                     }
+                )
+            }
+
+            composable(
+                route = Screen.ActivityReplay.route,
+                arguments = listOf(
+                    navArgument("activityId") { type = NavType.IntType }
+                )
+            ) {
+                ActivityReplayScreen(
+                    onBack = { navController.popBackStack() }
                 )
             }
 

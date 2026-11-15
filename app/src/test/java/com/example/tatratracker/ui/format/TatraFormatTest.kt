@@ -1,5 +1,6 @@
 package com.example.tatratracker.ui.format
 
+import java.time.ZoneId
 import java.util.Locale
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -115,5 +116,16 @@ class TatraFormatTest {
         assertEquals("127 bpm", TatraFormat.heartRate(127))
         assertEquals(TatraFormat.NO_DATA, TatraFormat.heartRate(0))
         assertEquals(TatraFormat.NO_DATA, TatraFormat.heartRate(null))
+    }
+
+    @Test
+    fun timeOfDay_inGivenZone() {
+        val warsaw = ZoneId.of("Europe/Warsaw")
+
+        // 2026-11-06 06:05:12 UTC = 7:05:12 w Warszawie (czas zimowy).
+        assertEquals("7:05:12", TatraFormat.timeOfDay(1_793_945_112L, warsaw))
+        assertEquals("6:05:12", TatraFormat.timeOfDay(1_793_945_112L, ZoneId.of("UTC")))
+        assertEquals(TatraFormat.NO_DATA, TatraFormat.timeOfDay(null, warsaw))
+        assertEquals(TatraFormat.NO_DATA, TatraFormat.timeOfDay(0L, warsaw))
     }
 }

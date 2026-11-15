@@ -1,5 +1,8 @@
 package com.example.tatratracker.ui.format
 
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 import java.util.Locale
 import kotlin.math.roundToInt
 import kotlin.math.roundToLong
@@ -15,6 +18,8 @@ import kotlin.math.roundToLong
 object TatraFormat {
 
     const val NO_DATA = "Brak danych"
+
+    private val timeOfDayFormatter = DateTimeFormatter.ofPattern("H:mm:ss", Locale.ROOT)
 
     /** „850 m” poniżej 1000 m, od 1000 m „21,8 km”. */
     fun distance(meters: Double?, locale: Locale = Locale.getDefault()): String {
@@ -64,6 +69,15 @@ object TatraFormat {
         val remainingSeconds = seconds % 60
 
         return String.format(Locale.ROOT, "%d:%02d:%02d", hours, minutes, remainingSeconds)
+    }
+
+    /** Godzina zegarowa „7:05:12” z czasu Unix w sekundach, w strefie [zoneId] (domyślnie urządzenia). */
+    fun timeOfDay(epochSeconds: Long?, zoneId: ZoneId = ZoneId.systemDefault()): String {
+        if (epochSeconds == null || epochSeconds <= 0L) {
+            return NO_DATA
+        }
+
+        return Instant.ofEpochSecond(epochSeconds).atZone(zoneId).format(timeOfDayFormatter)
     }
 
     /** Wysokość albo przewyższenie: „1450 m”. */

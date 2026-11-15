@@ -71,6 +71,14 @@ sealed class Screen(
         }
     }
 
+    // Pełnoekranowe odtwarzanie wędrówki (bez dolnego paska).
+    object ActivityReplay : Screen("activity_replay/{activityId}") {
+
+        fun createRoute(activityId: Int): String {
+            return "activity_replay/$activityId"
+        }
+    }
+
     object PlannedRouteDetails : Screen(
         "planned_route_details/{routeId}"
     ) {

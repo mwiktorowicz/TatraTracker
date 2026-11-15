@@ -4,6 +4,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -11,15 +12,19 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.outlined.DeleteOutline
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.FileDownload
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -34,6 +39,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.tatratracker.data.ActivityEntity
@@ -54,6 +60,7 @@ import com.example.tatratracker.ui.theme.TatraBackground
 import com.example.tatratracker.ui.theme.TatraDanger
 import com.example.tatratracker.ui.theme.TatraDangerSoft
 import com.example.tatratracker.ui.theme.TatraDark
+import com.example.tatratracker.ui.theme.TatraGreen
 import com.example.tatratracker.ui.theme.TatraGreenVerySoft
 import com.example.tatratracker.ui.theme.TatraOutline
 import com.example.tatratracker.ui.theme.TatraSpacing
@@ -67,6 +74,7 @@ import java.util.Locale
 fun ActivityDetailsScreen(
     onBack: () -> Unit,
     onDeleted: () -> Unit,
+    onReplay: () -> Unit,
     viewModel: ActivityDetailsViewModel = viewModel()
 ) {
     val activity by viewModel.activity.collectAsState()
@@ -234,7 +242,8 @@ fun ActivityDetailsScreen(
                     },
                     onDelete = {
                         showDeleteDialog = true
-                    }
+                    },
+                    onReplay = onReplay
                 )
             }
         }
@@ -248,7 +257,8 @@ private fun ActivityDetailsContent(
     modifier: Modifier = Modifier,
     onEdit: () -> Unit,
     onExport: () -> Unit,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
+    onReplay: () -> Unit
 ) {
     val scrollState = rememberScrollState()
     val sourceLabel = activityFormat(activity.sourceFileName)
@@ -356,18 +366,46 @@ private fun ActivityDetailsContent(
         Spacer(modifier = Modifier.height(TatraSpacing.md))
 
         if (trackPoints.size >= 2) {
-            Text(
-                text = "Przebieg trasy",
-                color = TatraDark,
-                style = MaterialTheme.typography.titleMedium
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Przebieg trasy",
+                        color = TatraDark,
+                        style = MaterialTheme.typography.titleMedium
+                    )
 
-            Text(
-                text = "Zielony punkt oznacza start, czerwony koniec śladu.",
-                color = TatraTextMuted,
-                style = MaterialTheme.typography.bodySmall,
-                modifier = Modifier.padding(top = 3.dp)
-            )
+                    Text(
+                        text = "Zielony punkt oznacza start, czerwony koniec śladu.",
+                        color = TatraTextMuted,
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.padding(top = 3.dp)
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(TatraSpacing.sm))
+
+                // Odtwarzanie wędrówki na pełnym ekranie (tylko gdy jest ślad GPS).
+                Button(
+                    onClick = onReplay,
+                    shape = MaterialTheme.shapes.small,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = TatraGreen,
+                        contentColor = Color.White
+                    ),
+                    contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.PlayArrow,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("Odtwórz")
+                }
+            }
 
             Spacer(modifier = Modifier.height(TatraSpacing.sm))
 
